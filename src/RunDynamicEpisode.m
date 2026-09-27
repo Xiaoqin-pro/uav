@@ -1,4 +1,4 @@
-function result = RunDynamicEpisode(model,algorithm,maxgen,Particle_Number,seed)
+function result = RunDynamicEpisode(model,algorithm,maxgen,Particle_Number,seed,sourceComposition)
 %RUNDYNAMICEPISODE Execute all configured dynamic events sequentially.
 %   Supports PSO, Warm-PSO, Warm-ALNS, EAT-PSO and two ablations. This is a
 %   development runner; event histories are correlated within a run.
@@ -6,6 +6,7 @@ if nargin < 2 || isempty(algorithm), algorithm = 'PSO'; end
 if nargin < 3 || isempty(maxgen), maxgen = 20; end
 if nargin < 4 || isempty(Particle_Number), Particle_Number = 20; end
 if nargin < 5 || isempty(seed), seed = 20261010; end
+if nargin < 6 || isempty(sourceComposition), sourceComposition = [2 3 1]; end
 
 state = model.initialState;
 previousSolution = [];
@@ -16,7 +17,10 @@ records = repmat(struct('eventIndex',0,'eventTime',0,'eventType','', ...
     'totalViolation',NaN,'isFeasible',false,'eventSeverity',NaN, ...
     'responseTime',NaN,'functionEvaluations',0,'firstFeasibleFE',inf, ...
     'severityOrderChange',NaN,'severityUrgency',NaN, ...
-    'severityRouteImpact',NaN,'guideWeight',NaN),0,1);
+    'severityRouteImpact',NaN,'guideWeight',NaN, ...
+    'sourceHistCount',0,'sourceInsertionCount',0,'sourceImmigrantCount',0, ...
+    'initialUniqueCount',0,'initialTargetUniqueCount',0, ...
+    'initialDuplicateRetries',0,'initialUniqueExhausted',false),0,1);
 plans = cell(numel(model.events)+1,1);
 histories = cell(numel(model.events)+1,1);
 
@@ -54,7 +58,7 @@ for e = 1:numel(model.events)
         history = EmptyHistory(plan);
     else
         [plan,~,planStats,history] = RunPlanner(model,state,algorithm,maxgen, ...
-            Particle_Number,previousSolution,seed+e);
+            Particle_Number,previousSolution,seed+e,sourceComposition);
     end
     response = toc(t0);
     item = records;
@@ -65,7 +69,10 @@ for e = 1:numel(model.events)
         'totalViolation',NaN,'isFeasible',false,'eventSeverity',NaN, ...
         'responseTime',NaN,'functionEvaluations',0,'firstFeasibleFE',inf, ...
     'severityOrderChange',NaN,'severityUrgency',NaN, ...
-    'severityRouteImpact',NaN,'guideWeight',NaN);
+    'severityRouteImpact',NaN,'guideWeight',NaN, ...
+    'sourceHistCount',0,'sourceInsertionCount',0,'sourceImmigrantCount',0, ...
+    'initialUniqueCount',0,'initialTargetUniqueCount',0, ...
+    'initialDuplicateRetries',0,'initialUniqueExhausted',false);
     plans{e+1} = plan;
     histories{e+1} = history;
     plannedRoute = plan.Route;
@@ -95,6 +102,15 @@ for e = 1:numel(model.events)
     item.responseTime = response;
     item.functionEvaluations = planStats.functionEvaluations;
     item.firstFeasibleFE = planStats.firstFeasibleFE;
+    if isfield(planStats,'sourceComposition')
+        item.sourceHistCount = planStats.sourceComposition(1);
+        item.sourceInsertionCount = planStats.sourceComposition(2);
+        item.sourceImmigrantCount = planStats.sourceComposition(3);
+        item.initialUniqueCount = planStats.initialUniqueCount;
+        item.initialTargetUniqueCount = planStats.initialTargetUniqueCount;
+        item.initialDuplicateRetries = planStats.initialDuplicateRetries;
+        item.initialUniqueExhausted = planStats.initialUniqueExhausted;
+    end
     if ~applied
         item.eventDescription = [item.eventDescription,' (not applied)'];
     end
@@ -109,7 +125,7 @@ result.finalState = state;
 result.finalModel = model;
 end
 
-function [plan,bestCost,stats,history] = RunPlanner(model,state,algorithm,maxgen,nPop,previous,seed)
+function [plan,bestCost,stats,history] = RunPlanner(model,state,algorithm,maxgen,nPop,previous,seed,sourceComposition)
 if strcmpi(algorithm,'PSO')
     [plan,bestCost,stats,history] = PSO(model,state,maxgen,nPop,seed);
 elseif strcmpi(algorithm,'Warm-PSO') || strcmpi(algorithm,'Warm_PSO')
@@ -117,19 +133,21 @@ elseif strcmpi(algorithm,'Warm-PSO') || strcmpi(algorithm,'Warm_PSO')
 elseif strcmpi(algorithm,'Warm-ALNS') || strcmpi(algorithm,'Warm_ALNS')
     [plan,bestCost,stats,history] = Warm_ALNS(model,state,maxgen,nPop,previous,seed);
 elseif strcmpi(algorithm,'EAT-NoReconstruction')
-    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-no-reconstruction');
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-no-reconstruction',sourceComposition);
 elseif strcmpi(algorithm,'EAT-FixedSeverity')
     [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core');
 elseif strcmpi(algorithm,'EAT-Adaptive')
-    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'adaptive-transfer');
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'adaptive-transfer',sourceComposition);
+elseif strcmpi(algorithm,'EAT-NoInsertion')
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-no-insertion',[2 0 4]);
 elseif strcmpi(algorithm,'EAT-PSO-321')
-    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core',[2 3 1]);
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core',[3 2 1]);
 elseif strcmpi(algorithm,'EAT-PSO-231')
-    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core',[2 3 1]);
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core',sourceComposition);
 elseif strcmpi(algorithm,'EAT-PSO-222')
     [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core',[2 2 2]);
 elseif strcmpi(algorithm,'EAT-PSO') || strcmpi(algorithm,'EAT_PSO')
-    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core',[2 3 1]);
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core',sourceComposition);
 else
     error('Unsupported algorithm: %s',algorithm);
 end
