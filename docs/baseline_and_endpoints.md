@@ -26,3 +26,25 @@ Distance is secondary. Safety violations verify constraints rather than serve as
 Same severe candidate and budget as calibration: future window 135, 8+6 orders, release start 45 and interval 15, safety samples 8, population 6, maxFE 18. Algorithms are Restart PSO, Warm-PSO, Warm-ALNS and Full EAT-PSO. New seed bases are `20350000 / 20351000 / 20352000 / 20353000`, runs 1..5; none is a reserved holdout tuple. Output prefix `independent_baseline_dev5`.
 
 This dry run checks baseline competitiveness and output/metric integrity. It is **not** a basis for choosing a different time-window setting, adding algorithm modules, or making SCI claims. If EAT fails against ALNS, record that result and revisit the paper hypothesis before using the reserved holdout.
+## Independent baseline dry run result — development only
+
+The five-new-seed dry run was completed after the deterministic unsafe-initial-realization rejection rule was added. Scenario: severe / future window 135, 8+6 orders, release 45+15k, population 6, 18 full route evaluations per replanning event. The methods were Restart PSO, Warm-PSO, Warm-ALNS and Full EAT-PSO. Metrics below are the mean of five **run-level** add-event summaries; they are not holdout evidence or significance tests.
+
+| Method | Add feasible recovery | Mean capped first-feasible FE | Mean add lateness | Mean response time |
+|---|---:|---:|---:|---:|
+| Restart PSO | 0.167 | 16.50 | 174.48 | 1.966 |
+| Warm-PSO | 0.567 | 11.17 | 19.19 | 1.572 |
+| Warm-ALNS | 0.600 | 8.27 | 15.70 | 1.600 |
+| Full EAT-PSO | 0.667 | 7.50 | 16.96 | 1.638 |
+
+This is encouraging but not conclusive: EAT has the best add recovery and first-feasible FE in this small dry run, while Warm-ALNS has slightly lower mean lateness and lower response time. The result justifies keeping Warm-ALNS as an independent comparison, not claiming EAT superiority. Inspect the five per-run records before any holdout decision. The raw machine result uses the `independent_baseline_dev5` prefix; the add endpoint summary uses `independent_baseline_dev5_add`. These files are development diagnostics and are not paper evidence.
+
+The rejected-initial-realization retry rule did not alter the screen/confirmation numerical runs; the new dry run records `effectiveOrderSeed` and `orderGenerationAttempts` so any future regenerated instance is traceable.
+
+## Updated next gate
+
+1. Review Warm-ALNS route semantics and response-time accounting; it is a compact clean-room baseline, not a verified reproduction of a published ALNS implementation.
+2. Freeze the four-method primary table and add-event endpoints if the dry-run review finds no implementation defect.
+3. Do one fixed-configuration pipeline dry run on 5–8 fresh non-holdout seeds, with no parameter changes based on outcomes.
+4. Tag the reviewed code/configuration as `paper-experiment-v1`.
+5. Only then consume the 30 reserved holdout tuples once, generating primary table, ablation table, recovery curves and paired run-level statistics.
