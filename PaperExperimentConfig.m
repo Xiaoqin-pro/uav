@@ -13,6 +13,7 @@ o.Particle_Number = 6;
 o.maxgen = 3;
 o.maxFE = 18;
 o.algorithms = {'PSO','Warm-PSO','Warm-ALNS','EAT-PSO'};
+o.sourceComposition = [2 3 1];
 o.ablationAlgorithms = {'EAT-PSO','EAT-NoReconstruction'};
 o.censoredFE = o.maxFE+1;
 o.primaryEventType = 'add';

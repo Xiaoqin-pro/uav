@@ -122,8 +122,14 @@ elseif strcmpi(algorithm,'EAT-FixedSeverity')
     [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core');
 elseif strcmpi(algorithm,'EAT-Adaptive')
     [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'adaptive-transfer');
+elseif strcmpi(algorithm,'EAT-PSO-321')
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core',[2 3 1]);
+elseif strcmpi(algorithm,'EAT-PSO-231')
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core',[2 3 1]);
+elseif strcmpi(algorithm,'EAT-PSO-222')
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core',[2 2 2]);
 elseif strcmpi(algorithm,'EAT-PSO') || strcmpi(algorithm,'EAT_PSO')
-    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core');
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core',[2 3 1]);
 else
     error('Unsupported algorithm: %s',algorithm);
 end

@@ -192,15 +192,17 @@ if strcmpi(options.variant,'paper-no-reconstruction') || strcmpi(options.variant
 end
 isAdaptive = strcmpi(options.variant,'adaptive-transfer');
 if isAdaptive
-    historicalShare = max(0.15,0.60-0.40*severity);
+    historicalCount = max(1,min(nPop-1,round((0.60-0.40*severity)*nPop)));
+    insertionCount = max(0,min(nPop-historicalCount,round(0.25*nPop)));
 else
-    historicalShare = 0.60;
+    historicalCount = options.sourceComposition(1);
+    insertionCount = options.sourceComposition(2);
 end
-if index <= floor(historicalShare*nPop) && ~isempty(previousSolution)
+if index <= historicalCount && ~isempty(previousSolution)
     route = PositionToRoute(oldGuide,activeIDs);
     position = RouteToPosition(route,activeIDs,0.025);
     label = "historical-transfer";
-elseif index <= floor(min(0.90,historicalShare+0.25)*nPop) ...
+elseif index <= historicalCount+insertionCount ...
         && ~isempty(previousSolution)
     route = BuildInsertionRoute(previousSolution.Route,activeIDs,scenario,state);
     position = RouteToPosition(route,activeIDs,0.01);
@@ -303,7 +305,8 @@ function options = FillOptions(options)
 defaults = struct('nPop',30,'maxIt',100,'maxFE',3000, ...
     'w',0.9,'wdamp',0.99,'c1',1.5,'c2',1.5, ...
     'velocityRatio',0.2,'seed',20260931,'variant','paper-core', ...
-    'fixedGuideWeight',0.5,'maxInitializationRetries',20);
+    'fixedGuideWeight',0.5,'maxInitializationRetries',20, ...
+    'sourceComposition',[2 3 1]);
 fields = fieldnames(defaults);
 for k = 1:numel(fields)
     if ~isfield(options,fields{k}) || isempty(options.(fields{k}))
