@@ -32,7 +32,9 @@ if nVar == 0
     stats.guideWeight = 0;
     stats.severityComponents = [0 0 0];
     stats.variant = options.variant;
-    stats.options = options;
+    stats.initialUniqueCount = numel(unique(usedSignatures));
+stats.initialDuplicateRetries = initialDuplicateRetries;
+stats.options = options;
     return;
 end
 
@@ -53,6 +55,10 @@ GlobalBest.Cost = inf;
 functionEvaluations = 0;
 firstFeasibleFE = inf;
 sourceLabels = strings(nPop,1);
+usedSignatures = strings(0,1);
+initialDuplicateRetries = 0;
+ensureUnique = strcmpi(options.variant,'paper-core') || ...
+    strcmpi(options.variant,'adaptive-transfer');
 
 if isempty(previousSolution)
     guideWeight = 1;  % No historical memory exists at initial planning.
@@ -62,8 +68,22 @@ else
     guideWeight = severity;
 end
 for i = 1:nPop
-    [position,sourceLabels(i)] = InitializePosition(i,nPop,activeIDs, ...
-        oldGuide,guideWeight,previousSolution,options,scenario,state);
+        for attempt = 1:options.maxInitializationRetries
+        [position,label] = InitializePosition(i,nPop,activeIDs, ...
+            oldGuide,guideWeight,previousSolution,options,scenario,state);
+        [~,order] = sort(position,'ascend');
+        candidateRoute = [fixedPrefix,activeIDs(order)];
+        signature = RouteSignature(candidateRoute);
+        if ~ensureUnique || ~ismember(signature,usedSignatures)
+            break;
+        end
+        initialDuplicateRetries = initialDuplicateRetries+1;
+        route = PerturbRoute(activeIDs(order));
+        position = RouteToPosition(route,activeIDs,0);
+        label = label+"-unique";
+    end
+    sourceLabels(i) = label;
+    usedSignatures(end+1) = signature;
     particle(i).Position = position;
     particle(i).Velocity = zeros(1,nVar);
     [particle(i).Cost,particle(i).Route,particle(i).Detail] = ...
@@ -90,7 +110,8 @@ history.diversity = PopulationDiversity(particle);
 w = options.w;
 
 for it = 1:options.maxIt
-    mixedGuide = MixGuides(oldGuide,GlobalBest.Position,guideWeight);
+    currentGuide = RouteToPosition(GlobalBest.Route,activeIDs,0);
+    mixedGuide = MixGuides(oldGuide,currentGuide,guideWeight);
     for i = 1:nPop
         if functionEvaluations >= options.maxFE, break; end
         particle(i).Velocity = w*particle(i).Velocity ...
@@ -138,6 +159,8 @@ stats.guideWeight = guideWeight;
 stats.severityComponents = severityComponents;
 stats.sourceLabels = sourceLabels;
 stats.variant = options.variant;
+stats.initialUniqueCount = numel(unique(usedSignatures));
+stats.initialDuplicateRetries = initialDuplicateRetries;
 stats.options = options;
 end
 
@@ -262,11 +285,28 @@ function options = FillOptions(options)
 defaults = struct('nPop',30,'maxIt',100,'maxFE',3000, ...
     'w',0.9,'wdamp',0.99,'c1',1.5,'c2',1.5, ...
     'velocityRatio',0.2,'seed',20260931,'variant','paper-core', ...
-    'fixedGuideWeight',0.5);
+    'fixedGuideWeight',0.5,'maxInitializationRetries',20);
 fields = fieldnames(defaults);
 for k = 1:numel(fields)
     if ~isfield(options,fields{k}) || isempty(options.(fields{k}))
         options.(fields{k}) = defaults.(fields{k});
     end
 end
+end
+
+function route = PerturbRoute(route)
+if numel(route)<2, return; end
+if rand<0.5
+    idx = randperm(numel(route),2);
+    route(idx) = route(fliplr(idx));
+else
+    from = randi(numel(route));
+    item = route(from); route(from) = [];
+    pos = randi(numel(route)+1);
+    route = [route(1:pos-1),item,route(pos:end)];
+end
+end
+
+function s = RouteSignature(route)
+s = string(strjoin(string(route),'-'));
 end
