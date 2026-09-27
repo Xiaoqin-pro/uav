@@ -10,7 +10,7 @@ if ~isfield(cfg,'level'), cfg.level = 'mild'; end
 
 envCfg = cfg;
 env = CreateEnvironment(envCfg);
-orders = CreateOrders(env,cfg);
+[orders,referenceRoute] = CreateOrders(env,cfg);
 events = CreateDynamicEvents(orders,cfg);
 
 initialIDs = find(strcmp({orders.status},'active'))';
@@ -32,9 +32,21 @@ state.pending = struct('id',0,'departureTime',NaN, ...
 
 scenario.env = env;
 scenario.orders = orders;
+scenario.referenceRoute = referenceRoute;
 scenario.events = events;
 scenario.initialState = state;
 scenario.config = cfg;
 scenario.schemaVersion = '0.2-dynamic-execution';
 scenario.level = lower(char(cfg.level));
+[scenario.referenceCost,scenario.referenceDetail] = ...
+    EvaluateRoute(referenceRoute,scenario,state);
+if strcmpi(GetInitialWindowMode(cfg),'reference') && ...
+        ~scenario.referenceDetail.isFeasible
+    error('Constructed reference route is not feasible; check data contract.');
+end
+end
+
+function mode = GetInitialWindowMode(cfg)
+if isfield(cfg,'initialWindowMode'), mode = cfg.initialWindowMode;
+else, mode = 'reference'; end
 end

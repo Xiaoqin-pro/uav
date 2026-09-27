@@ -18,13 +18,16 @@ records = repmat(struct('eventIndex',0,'eventTime',0,'eventType','', ...
     'responseTime',NaN,'functionEvaluations',0),0,1);
 plans = cell(numel(model.events)+1,1);
 
-% Plan at time zero.
+% Plan at time zero from the same constructed feasible reference for all
+% methods. The reference construction is shared and not a dynamic response FE.
 t0 = tic;
 if isempty(state.activeOrderIDs)
     plan = EmptyPlan(state);
     planStats.functionEvaluations = 0;
 else
-    [plan,~,planStats] = PSO(model,state,maxgen,Particle_Number,seed);
+    reference = struct('Route',model.referenceRoute);
+    [plan,~,planStats] = Warm_PSO(model,state,maxgen, ...
+        Particle_Number,reference,seed);
 end
 response = toc(t0);
 plans{1} = plan;

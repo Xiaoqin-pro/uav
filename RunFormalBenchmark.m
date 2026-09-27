@@ -19,6 +19,14 @@ for levelIndex = 1:numel(levels)
         cfg.nFutureOrders = options.nFutureOrders;
         cfg.level = levels{levelIndex};
         cfg.safetySamples = options.safetySamples;
+        cfg.initialWindowMode = 'reference';
+        if isfield(options,'windowLengthOverride')
+            cfg.windowLengthOverride = options.windowLengthOverride;
+        end
+        if isfield(options,'releaseStart'), cfg.releaseStart = options.releaseStart; end
+        if isfield(options,'releaseInterval')
+            cfg.releaseInterval = options.releaseInterval;
+        end
         cfg.terrainSeed = options.baseTerrainSeed + runIndex;
         cfg.orderSeed = options.baseOrderSeed + 100*levelIndex + runIndex;
         cfg.eventSeed = options.baseEventSeed + 1000*levelIndex + runIndex;

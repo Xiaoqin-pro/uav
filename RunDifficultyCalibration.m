@@ -5,8 +5,11 @@ function RunDifficultyCalibration(options)
 if nargin < 1, options = struct(); end
 options = FillOptions(options);
 algorithms = {'PSO','Warm-PSO'};
+eventRows = table();
 rows = repmat(struct('level','','run',0,'algorithm','', ...
-    'nEvents',0,'eventAppliedRate',NaN,'addAppliedRate',NaN, ...
+    'nEvents',0,'referenceFeasible',false,'referenceCost',NaN, ...
+    'initialFeasible',false,'initialLate',NaN, ...
+    'eventAppliedRate',NaN,'addAppliedRate',NaN, ...
     'cancelAppliedRate',NaN,'eventFeasibleRate',NaN, ...
     'appliedEventFeasibleRate',NaN, ...
     'meanLate',NaN,'meanViolation',NaN,'meanDistance',NaN, ...
@@ -18,6 +21,7 @@ for levelIndex = 1:numel(options.levels)
         cfg.nFutureOrders = options.nFutureOrders;
         cfg.level = options.levels{levelIndex};
         cfg.safetySamples = options.safetySamples;
+        cfg.initialWindowMode = 'reference';
         if isfield(options,'windowLengthOverride')
             cfg.windowLengthOverride = options.windowLengthOverride;
         end
@@ -43,6 +47,18 @@ for levelIndex = 1:numel(options.levels)
             row.run = runIndex;
             row.algorithm = algorithm;
             row.nEvents = height(T);
+            row.referenceFeasible = model.referenceDetail.isFeasible;
+            row.referenceCost = model.referenceCost;
+            row.initialFeasible = result.plans{1}.Detail.isFeasible;
+            row.initialLate = result.plans{1}.Detail.totalLate;
+            T.level = repmat(string(cfg.level),height(T),1);
+            T.run = repmat(runIndex,height(T),1);
+            T.algorithm = repmat(string(algorithm),height(T),1);
+            T.terrainSeed = repmat(cfg.terrainSeed,height(T),1);
+            T.orderSeed = repmat(cfg.orderSeed,height(T),1);
+            T.eventSeed = repmat(cfg.eventSeed,height(T),1);
+            T.algorithmSeed = repmat(seed,height(T),1);
+            if isempty(eventRows), eventRows = T; else, eventRows = [eventRows;T]; end
             row.eventAppliedRate = mean(double(T.eventApplied));
             addMask = strcmp(T.eventType,'add');
             cancelMask = strcmp(T.eventType,'cancel');
@@ -71,7 +87,8 @@ T = struct2table(rows);
 outDir = fullfile(fileparts(mfilename('fullpath')),'results');
 if ~exist(outDir,'dir'), mkdir(outDir); end
 writetable(T,fullfile(outDir,[options.outputStem,'.csv']));
-save(fullfile(outDir,[options.outputStem,'.mat']),'T','options');
+writetable(eventRows,fullfile(outDir,[options.outputStem,'_events.csv']));
+save(fullfile(outDir,[options.outputStem,'.mat']),'T','eventRows','options');
 disp(T);
 end
 

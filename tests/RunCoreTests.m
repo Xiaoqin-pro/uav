@@ -8,6 +8,14 @@ cfg.safetySamples = 8;
 cfg.level = 'mild';
 model = CreateModel(cfg);
 assert(ValidateScenario(model).ok);
+assert(model.referenceDetail.isFeasible);
+assert(isequal(sort(model.referenceRoute(:)'), ...
+    sort(model.initialState.activeOrderIDs(:)')));
+for e = model.events(:)'
+    if strcmp(e.type,'add')
+        assert(abs(e.time-model.orders(e.orderIDs).releaseTime)<1e-10);
+    end
+end
 state = model.initialState;
 route = state.activeOrderIDs;
 first = route(1);

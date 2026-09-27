@@ -103,3 +103,8 @@ RunAblation;                                % 两个机制的开发级消融
 ```
 
 根目录还提供 `Warm_PSO.m`、`RunDifficultyCalibration.m` 和 `RunAblation.m`。正式实验须先冻结场景生成规则、独立种子及统计口径。
+## Blind calibration status (2026-09-27)
+
+Current initial-order windows are constructed from a deterministic, independently evaluated reference route, so every generated initial scenario has at least one feasible plan. Future arrivals remain exogenous synthetic orders. The baseline-only window screen nominated **severe / future window 135** for independent confirmation; this is a **development candidate**, not a publishable result. See `docs/calibration_protocol.md` and `docs/review_and_calibration.md` for the criteria, seed sets, raw-result hashes, and limitations.
+
+`RunBlindWindowScreen` uses only PSO and Warm-PSO. `data/reserved_holdout_seeds.csv` contains 30 disjoint tuples reserved for later use; do not consume them during algorithm development. The current `RunAblation` and `RunFormalBenchmark` are development interfaces, not the final statistical pipeline.

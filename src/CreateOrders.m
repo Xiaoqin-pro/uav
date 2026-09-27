@@ -1,4 +1,4 @@
-function orders = CreateOrders(env,cfg)
+function [orders,referenceRoute] = CreateOrders(env,cfg)
 %CREATEORDERS Create initial and future order records.
 if nargin < 2, cfg = struct(); end
 if ~isfield(cfg,'nInitialOrders'), cfg.nInitialOrders = 20; end
@@ -6,14 +6,15 @@ if ~isfield(cfg,'nFutureOrders'), cfg.nFutureOrders = 8; end
 if ~isfield(cfg,'orderSeed'), cfg.orderSeed = 20260928; end
 if ~isfield(cfg,'orderMargin'), cfg.orderMargin = 18; end
 if ~isfield(cfg,'level'), cfg.level = 'mild'; end
+if ~isfield(cfg,'initialWindowMode'), cfg.initialWindowMode = 'reference'; end
 level = lower(char(cfg.level));
 switch level
     case 'mild'
-        windowLength = 320; readyStep = 3;
+        windowLength = 320; readyStep = 3; referenceSlack = 100;
     case 'moderate'
-        windowLength = 240; readyStep = 5;
+        windowLength = 240; readyStep = 5; referenceSlack = 65;
     case 'severe'
-        windowLength = 170; readyStep = 7;
+        windowLength = 170; readyStep = 7; referenceSlack = 35;
     otherwise
         error('Unknown scenario level: %s',cfg.level);
 end
@@ -61,5 +62,35 @@ for i = 1:N
         orders(i).status = 'active';
     end
 end
+referenceRoute = NearestNeighborReference(orders(1:cfg.nInitialOrders),env);
+if strcmpi(cfg.initialWindowMode,'reference')
+    currentTime = 0; currentPosition = env.depot;
+    for id = referenceRoute
+        leg = Plan3DLeg(currentPosition,orders(id).xyz,env);
+        arrival = currentTime + leg.distance/env.speed;
+        orders(id).readyTime = max(0,arrival-5);
+        orders(id).dueTime = arrival + referenceSlack;
+        currentTime = arrival + orders(id).serviceTime;
+        currentPosition = orders(id).xyz;
+    end
+elseif ~strcmpi(cfg.initialWindowMode,'legacy')
+    error('Unknown initialWindowMode: %s',cfg.initialWindowMode);
+end
 rng(oldRng);
+end
+
+function route = NearestNeighborReference(initialOrders,env)
+remaining = [initialOrders.id];
+position = env.depot;
+route = zeros(1,numel(remaining));
+for k = 1:numel(route)
+    distance = zeros(1,numel(remaining));
+    for j = 1:numel(remaining)
+        distance(j) = norm(initialOrders(remaining(j)).xyz-position);
+    end
+    [~,idx] = min(distance);
+    route(k) = remaining(idx);
+    position = initialOrders(route(k)).xyz;
+    remaining(idx) = [];
+end
 end

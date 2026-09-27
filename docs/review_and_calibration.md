@@ -37,3 +37,21 @@
 2. 航点设在地形最高点以上，三维安全航段通常均可行，主要难度来自订单时间窗，不应伪称地形碰撞是算法主要增益来源。
 3. 各算法在线执行的历史不同，虽然外生订单事件表一致，但事件时 UAV 状态可能不同。严格解释为**同一事件流下的在线策略比较**，不把每个事件行当独立配对样本。
 4. 当前 `RunFormalBenchmark` 是开发实验入口，默认 3 次运行不能用于论文；结果目录中的 pilot CSV 不应引用到稿件。
+
+## Reference-feasible data contract and multi-seed follow-up
+
+The earlier one-seed 95/115/135/155 screen above was generated **before** guaranteeing a feasible initial route. It is superseded for scenario selection. The new generator creates a deterministic nearest-neighbor initial reference, derives each initial due time using the actual `Plan3DLeg` flight time plus level-specific slack, and verifies that route. Every online algorithm receives the same reference-seeded initial PSO plan; later policies diverge naturally. Future orders remain exogenous. This synthetic construction must be declared in any eventual paper.
+
+Under this new contract, the baseline-only 4-seed screen (8+6 orders, severe, 18 FE per replan, release 45+15k) produced the following **mean of per-run metrics**:
+
+| Future window | Initial plans feasible | Mean add applied | Mean cancel applied | Mean applied-event feasible (PSO and Warm-PSO pooled) | Pilot rule |
+|---:|---:|---:|---:|---:|---|
+| 135 | all | 1.000 | 0.792 | 0.382 | pass |
+| 155 | all | 1.000 | 0.833 | 0.481 | pass |
+| 175 | all | 1.000 | 0.792 | 0.604 | pass |
+
+The prespecified smallest-passing rule nominates window **135**. An independent baseline-only six-seed confirmation (different terrain/order/event/algorithm seed bases) produced initial feasible rate 1 for both methods, add applied rate 1, mean cancellation applied rate 0.611, and pooled run-mean applied-event feasible rate approximately **0.314**. The individual means were **0.042** for Restart PSO and **0.586** for Warm-PSO; these are diagnostic, correlated-event measurements over six scenarios, not significance evidence. In this regime warm-start already provides a strong challenge, so no claim of EAT superiority is justified.
+
+Generated raw CSVs remain in `results/` and are not versioned as publication evidence. SHA-256 of `blind_window_screen.csv`: `fb5cbc5958bbbefd56b97930f20153d6b03b426d5cd5da33f211b48b67c2478f`. SHA-256 of `confirm_w135_6seeds.csv`: `9a5651341dc97d7f6efe2bdc0328bc074cf259e984133be5d6302295412f10fb`. Both correspond to the code state before this log-only edit.
+
+**Next gate:** review per-event online trajectories and a limited EAT development set with seeds disjoint from the 30 reserved holdout tuples. The candidate remains provisional; do not run the reserved tuples or write Results claims until the mechanism and evaluation contract are frozen.
