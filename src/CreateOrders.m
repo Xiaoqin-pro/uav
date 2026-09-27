@@ -5,6 +5,18 @@ if ~isfield(cfg,'nInitialOrders'), cfg.nInitialOrders = 20; end
 if ~isfield(cfg,'nFutureOrders'), cfg.nFutureOrders = 8; end
 if ~isfield(cfg,'orderSeed'), cfg.orderSeed = 20260928; end
 if ~isfield(cfg,'orderMargin'), cfg.orderMargin = 18; end
+if ~isfield(cfg,'level'), cfg.level = 'mild'; end
+level = lower(char(cfg.level));
+switch level
+    case 'mild'
+        windowLength = 320; readyStep = 3;
+    case 'moderate'
+        windowLength = 240; readyStep = 5;
+    case 'severe'
+        windowLength = 170; readyStep = 7;
+    otherwise
+        error('Unknown scenario level: %s',cfg.level);
+end
 
 oldRng = rng;
 rng(cfg.orderSeed,'twister');
@@ -19,8 +31,9 @@ xyz = [xy, repmat(env.flightAltitude,N,1)];
 % intentionally moderate; the experiment scripts will create stress cases.
 release = zeros(N,1);
 release(cfg.nInitialOrders+1:end) = 180 + 40*(0:cfg.nFutureOrders-1);
-ready = 15 + 3*(0:N-1)';
-due = ready + 300;
+ready = 15 + readyStep*(0:N-1)';
+ready(cfg.nInitialOrders+1:end) = release(cfg.nInitialOrders+1:end) + 10;
+due = ready + windowLength;
 service = 8 + 4*mod((0:N-1)',4);
 priority = 1 + mod((0:N-1)',3);
 
@@ -43,4 +56,6 @@ for i = 1:N
 end
 rng(oldRng);
 end
+
+
 

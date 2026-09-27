@@ -59,4 +59,7 @@ detail.finalPosition = currentPosition;
 detail.records = records;
 detail.routeLegs = routeLegs;
 detail.isFeasible = totalViolation <= 1e-9 && totalLate <= 1e-9;
+detail.comparisonVector = [totalViolation,totalLate, ...
+    totalDistance+env.smoothPenalty*totalSmoothness];
 end
+

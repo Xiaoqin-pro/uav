@@ -46,6 +46,7 @@ results/      运行输出，不手工修改
 cd('D:\111\Desktop\噜噜\new');
 setup;
 RunSmokeTest;
+RunScenarioAudit;
 ```
 
 当前 main.m 和 smoke test 会：
@@ -85,6 +86,7 @@ main;
 ```
 
 `main.m` 当前只是小规模演示入口，正式论文实验不会使用该演示规模，也不会把演示输出直接当作论文结论。
+
 
 
 

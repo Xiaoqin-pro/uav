@@ -6,6 +6,7 @@ if ~isfield(cfg,'nFutureOrders'), cfg.nFutureOrders = 8; end
 if ~isfield(cfg,'terrainSeed'), cfg.terrainSeed = 20260927; end
 if ~isfield(cfg,'orderSeed'), cfg.orderSeed = 20260928; end
 if ~isfield(cfg,'eventSeed'), cfg.eventSeed = 20260929; end
+if ~isfield(cfg,'level'), cfg.level = 'mild'; end
 
 envCfg = cfg;
 env = CreateEnvironment(envCfg);
@@ -29,6 +30,8 @@ scenario.orders = orders;
 scenario.events = events;
 scenario.initialState = state;
 scenario.config = cfg;
-scenario.schemaVersion = '0.1-data-contract';
+scenario.schemaVersion = '0.2-dynamic-execution';
+scenario.level = lower(char(cfg.level));
 end
+
 

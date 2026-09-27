@@ -30,7 +30,8 @@ for i = 1:nPop
         EvaluatePosition(particle(i).Position,activeIDs,scenario,state);
     functionEvaluations = functionEvaluations + 1;
     particle(i).Best = particle(i);
-    if particle(i).Cost < GlobalBest.Cost
+    if CompareRouteDetails(particle(i).Cost,particle(i).Detail, ...
+            GlobalBest.Cost,GlobalBest.Detail)
         GlobalBest = particle(i);
     end
 end
@@ -55,9 +56,11 @@ for it = 1:options.maxIt
         [particle(i).Cost,particle(i).Route,particle(i).Detail] = ...
             EvaluatePosition(particle(i).Position,activeIDs,scenario,state);
         functionEvaluations = functionEvaluations + 1;
-        if particle(i).Cost < particle(i).Best.Cost
+        if CompareRouteDetails(particle(i).Cost,particle(i).Detail, ...
+                particle(i).Best.Cost,particle(i).Best.Detail)
             particle(i).Best = particle(i);
-            if particle(i).Best.Cost < GlobalBest.Cost
+            if CompareRouteDetails(particle(i).Best.Cost,particle(i).Best.Detail, ...
+                    GlobalBest.Cost,GlobalBest.Detail)
                 GlobalBest = particle(i).Best;
             end
         end
@@ -98,3 +101,4 @@ for k = 1:numel(fields)
     end
 end
 end
+
