@@ -108,3 +108,7 @@ RunAblation;                                % 两个机制的开发级消融
 Current initial-order windows are constructed from a deterministic, independently evaluated reference route, so every generated initial scenario has at least one feasible plan. Future arrivals remain exogenous synthetic orders. The baseline-only window screen nominated **severe / future window 135** for independent confirmation; this is a **development candidate**, not a publishable result. See `docs/calibration_protocol.md` and `docs/review_and_calibration.md` for the criteria, seed sets, raw-result hashes, and limitations.
 
 `RunBlindWindowScreen` uses only PSO and Warm-PSO. `data/reserved_holdout_seeds.csv` contains 30 disjoint tuples reserved for later use; do not consume them during algorithm development. The current `RunAblation` and `RunFormalBenchmark` are development interfaces, not the final statistical pipeline.
+
+## Event recovery diagnostics
+
+The development runner now records `firstFeasibleFE` for each event and writes `<outputStem>_recovery.csv` with post-event FE, lateness, safety violation and feasibility at each checkpoint. `SummarizeDynamicRuns` first aggregates correlated events within a scenario run; `PlotRecoveryDiagnostic` generates a run-level-aggregated, explicitly exploratory recovery plot. These are diagnostic utilities, **not** a substitute for the eventual 30 disjoint holdout scenarios and an independent strong baseline.

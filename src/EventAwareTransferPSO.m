@@ -23,10 +23,13 @@ if nVar == 0
     history.isFeasible = detail.isFeasible;
     history.diversity = 0;
     stats.functionEvaluations = 1;
+    if detail.isFeasible, stats.firstFeasibleFE = 1;
+    else, stats.firstFeasibleFE = inf; end
     stats.nVar = 0;
     stats.activeOrderIDs = activeIDs;
     stats.fixedPrefixIDs = fixedPrefix;
     stats.eventSeverity = 0;
+    stats.guideWeight = 0;
     stats.severityComponents = [0 0 0];
     stats.variant = options.variant;
     stats.options = options;
@@ -48,6 +51,7 @@ particle = repmat(empty,nPop,1);
 GlobalBest = empty;
 GlobalBest.Cost = inf;
 functionEvaluations = 0;
+firstFeasibleFE = inf;
 sourceLabels = strings(nPop,1);
 
 if isempty(previousSolution)
@@ -65,6 +69,9 @@ for i = 1:nPop
     [particle(i).Cost,particle(i).Route,particle(i).Detail] = ...
         EvaluatePosition(position,activeIDs,fixedPrefix,scenario,state);
     functionEvaluations = functionEvaluations + 1;
+    if isinf(firstFeasibleFE) && particle(i).Detail.isFeasible
+        firstFeasibleFE = functionEvaluations;
+    end
     particle(i).Best = particle(i);
     if CompareRouteDetails(particle(i).Cost,particle(i).Detail, ...
             GlobalBest.Cost,GlobalBest.Detail)
@@ -96,6 +103,9 @@ for it = 1:options.maxIt
         [particle(i).Cost,particle(i).Route,particle(i).Detail] = ...
             EvaluatePosition(particle(i).Position,activeIDs,fixedPrefix,scenario,state);
         functionEvaluations = functionEvaluations + 1;
+        if isinf(firstFeasibleFE) && particle(i).Detail.isFeasible
+            firstFeasibleFE = functionEvaluations;
+        end
         if CompareRouteDetails(particle(i).Cost,particle(i).Detail, ...
                 particle(i).Best.Cost,particle(i).Best.Detail)
             particle(i).Best = particle(i);
@@ -119,10 +129,12 @@ end
 bestSol = GlobalBest;
 bestSol.Route = GlobalBest.Route;
 stats.functionEvaluations = functionEvaluations;
+stats.firstFeasibleFE = firstFeasibleFE;
 stats.nVar = nVar;
 stats.activeOrderIDs = activeIDs;
 stats.fixedPrefixIDs = fixedPrefix;
 stats.eventSeverity = severity;
+stats.guideWeight = guideWeight;
 stats.severityComponents = severityComponents;
 stats.sourceLabels = sourceLabels;
 stats.variant = options.variant;

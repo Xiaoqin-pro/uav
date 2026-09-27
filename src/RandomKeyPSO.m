@@ -19,6 +19,8 @@ if nVar == 0
     history.totalViolation = detail.totalViolation;
     history.isFeasible = detail.isFeasible;
     stats.functionEvaluations = 1;
+    if detail.isFeasible, stats.firstFeasibleFE = 1;
+    else, stats.firstFeasibleFE = inf; end
     stats.nVar = 0;
     stats.activeOrderIDs = searchIDs;
     stats.fixedPrefixIDs = fixedPrefix;
@@ -38,6 +40,7 @@ particle = repmat(empty,nPop,1);
 
 vMax = options.velocityRatio;
 functionEvaluations = 0;
+firstFeasibleFE = inf;
 GlobalBest = empty;
 GlobalBest.Cost = inf;
 
@@ -52,6 +55,9 @@ for i = 1:nPop
     [particle(i).Cost,particle(i).Route,particle(i).Detail] = ...
         EvaluatePosition(particle(i).Position,searchIDs,fixedPrefix,scenario,state);
     functionEvaluations = functionEvaluations + 1;
+    if isinf(firstFeasibleFE) && particle(i).Detail.isFeasible
+        firstFeasibleFE = functionEvaluations;
+    end
     particle(i).Best = particle(i);
     if CompareRouteDetails(particle(i).Cost,particle(i).Detail, ...
             GlobalBest.Cost,GlobalBest.Detail)
@@ -79,6 +85,9 @@ for it = 1:options.maxIt
         [particle(i).Cost,particle(i).Route,particle(i).Detail] = ...
             EvaluatePosition(particle(i).Position,searchIDs,fixedPrefix,scenario,state);
         functionEvaluations = functionEvaluations + 1;
+        if isinf(firstFeasibleFE) && particle(i).Detail.isFeasible
+            firstFeasibleFE = functionEvaluations;
+        end
         if CompareRouteDetails(particle(i).Cost,particle(i).Detail, ...
                 particle(i).Best.Cost,particle(i).Best.Detail)
             particle(i).Best = particle(i);
@@ -102,6 +111,7 @@ bestSol = GlobalBest;
 bestSol.Position = GlobalBest.Position;
 bestSol.Route = GlobalBest.Route;
 stats.functionEvaluations = functionEvaluations;
+stats.firstFeasibleFE = firstFeasibleFE;
 stats.nVar = nVar;
 stats.activeOrderIDs = searchIDs;
 stats.fixedPrefixIDs = fixedPrefix;

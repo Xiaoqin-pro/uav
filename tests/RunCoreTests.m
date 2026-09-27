@@ -69,5 +69,23 @@ for variant = {'full','no-reconstruction','fixed-severity'}
     assert(numel(unique(solution.Route))==numel(state.activeOrderIDs));
     assert(all(ismember(solution.Route,state.activeOrderIDs)));
 end
-fprintf('Core tests passed: locked prefix, repeated event, service, FE and severity.\n');
+episode = RunEpisode(CreateModel(cfg),'PSO',2,4,27183);
+for e = 1:numel(episode.records)
+    h = episode.histories{e+1};
+    assert(all(diff(h.FE)>=0));
+    assert(h.FE(end)==episode.records(e).functionEvaluations);
+    assert(h.FE(end)<=8);
+    first = find(h.isFeasible,1,'first');
+    if isempty(first), assert(isinf(episode.records(e).firstFeasibleFE));
+    else
+        assert(episode.records(e).firstFeasibleFE<=h.FE(first));
+        assert(episode.records(e).firstFeasibleFE>=0);
+    end
+end
+manifest = readtable(fullfile(root,'data','reserved_holdout_seeds.csv'));
+assert(height(manifest)==30);
+assert(numel(unique(manifest.scenarioId))==30);
+assert(numel(unique(manifest.terrainSeed))==30);
+assert(all(manifest.terrainSeed>20286000));
+fprintf('Core tests passed: locked prefix, repeated event, service, FE, history, severity and reserved seeds.\n');
 end

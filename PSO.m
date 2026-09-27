@@ -1,4 +1,4 @@
-function [BestSol,BestCost,stats] = PSO(model,state,maxgen,Particle_Number,seed)
+function [BestSol,BestCost,stats,history] = PSO(model,state,maxgen,Particle_Number,seed)
 %PSO Baseline Random-key PSO using a compact teacher-style interface.
 %   The implementation remains in src/RandomKeyPSO.m so the root entry
 %   point stays easy to compare with other algorithms.

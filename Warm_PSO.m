@@ -1,4 +1,4 @@
-function [BestSol,BestCost,stats] = Warm_PSO(model,state,maxgen,Particle_Number,previousSolution,seed)
+function [BestSol,BestCost,stats,history] = Warm_PSO(model,state,maxgen,Particle_Number,previousSolution,seed)
 %WARM_PSO Warm-start PSO baseline: only a small fraction of particles are
 % initialized from the previous route; the rest remain random.
 if nargin < 3 || isempty(maxgen), maxgen = 100; end

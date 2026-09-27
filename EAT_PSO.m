@@ -1,4 +1,4 @@
-function [BestSol,BestCost,stats] = EAT_PSO(model,state,maxgen,Particle_Number,previousSolution,seed,variant)
+function [BestSol,BestCost,stats,history] = EAT_PSO(model,state,maxgen,Particle_Number,previousSolution,seed,variant)
 %EAT_PSO Event-aware transfer PSO.
 %   This is the first implementation of the proposed structure:
 %   multi-source population transfer plus event-severity-dependent guide

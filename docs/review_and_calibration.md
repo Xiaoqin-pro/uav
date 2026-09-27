@@ -55,3 +55,27 @@ The prespecified smallest-passing rule nominates window **135**. An independent 
 Generated raw CSVs remain in `results/` and are not versioned as publication evidence. SHA-256 of `blind_window_screen.csv`: `fb5cbc5958bbbefd56b97930f20153d6b03b426d5cd5da33f211b48b67c2478f`. SHA-256 of `confirm_w135_6seeds.csv`: `9a5651341dc97d7f6efe2bdc0328bc074cf259e984133be5d6302295412f10fb`. Both correspond to the code state before this log-only edit.
 
 **Next gate:** review per-event online trajectories and a limited EAT development set with seeds disjoint from the 30 reserved holdout tuples. The candidate remains provisional; do not run the reserved tuples or write Results claims until the mechanism and evaluation contract are frozen.
+
+## Disjoint EAT development pilot (not confirmatory)
+
+After committing the blind-selection protocol, four new development seed triples (bases `20282000/20283000/20284000/20285000`, distinct from pilot, six-seed confirmation and reserved holdout) were run on the nominated severe / 135 candidate with 18 full route evaluations per replanning event. The following is the **mean of four per-run summaries**, not 36 independent samples:
+
+| Method | Applied-event feasible fraction | Mean event lateness (all requested events) |
+|---|---:|---:|
+| Restart PSO | 0.031 | 139.54 |
+| Warm-PSO | 0.313 | 36.41 |
+| EAT without reconstruction | 0.250 | 41.37 |
+| EAT with fixed severity | 0.442 | 17.90 |
+| Full EAT-PSO | 0.442 | 14.95 |
+
+The full method did **not** improve feasible fraction over the fixed-severity variant in these four development runs. Lateness differences are inconsistent run by run, so the pilot does not establish the adaptation mechanism. The reconstruction ablation looks more promising, but sample size is too small for a claim. The current paper story must remain conditional; do not add modules just to manufacture a win.
+
+Machine-generated diagnostic summary: `results/candidate_w135_dev4_summary.csv`, SHA-256 `8640099dc9b6fa40d1dfa7c9b2edfc26fe6909e3f1b865769312848381f42727`. These data use synthetic orders and are **not** publication evidence. An independent single-seed smoke test now verifies recovery traces at FE checkpoints and `PlotRecoveryDiagnostic` creates an explicitly exploratory plot; its curves should not be interpreted as a multi-seed comparison.
+
+The 30 reserved holdout scenarios remain unused. Before evaluating them: review the event-severity mechanism, preserve a non-PSO strong baseline plan, lock a full experiment configuration, and compute run-level paired statistics with honest FE and wall-time accounting.
+
+## FE recovery instrumentation
+
+After the four-seed development pilot, the runner was instrumented to record (a) the **exact evaluation index** at which a feasible route is first seen, (b) best-known feasibility/lateness at population/iteration FE checkpoints, and (c) the three severity components and actual guide weight. `SummarizeDynamicRuns` uses a scenario-run as its unit of replication. `PlotRecoveryDiagnostic` averages applied events *inside* each run before summarizing runs. Its single-seed smoke-test figure only verifies the pipeline; it is not a manuscript figure. The four-seed pilot table above predates these added diagnostic columns; the algorithmic decision rules were not changed by this instrumentation.
+
+In the four development scenarios the mean number of active orders at an applied event ranged from roughly 7.1 (EAT-PSO) to 7.8 (Restart-PSO); these online state differences are part of each strategy's trajectory. Every applied event in this small pilot occurred with one locked target, validating that the fixed-prefix rule is exercised. These observations do not substitute for an independent multi-seed mechanism analysis.
