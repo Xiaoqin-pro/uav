@@ -7,7 +7,8 @@ options = FillOptions(options);
 algorithms = {'PSO','Warm-PSO'};
 eventRows = table();
 rows = repmat(struct('level','','run',0,'algorithm','', ...
-    'nEvents',0,'referenceFeasible',false,'referenceCost',NaN, ...
+    'nEvents',0,'effectiveOrderSeed',0, ...
+    'orderGenerationAttempts',0,'referenceFeasible',false,'referenceCost',NaN, ...
     'initialFeasible',false,'initialLate',NaN, ...
     'eventAppliedRate',NaN,'addAppliedRate',NaN, ...
     'cancelAppliedRate',NaN,'eventFeasibleRate',NaN, ...
@@ -47,6 +48,8 @@ for levelIndex = 1:numel(options.levels)
             row.run = runIndex;
             row.algorithm = algorithm;
             row.nEvents = height(T);
+            row.effectiveOrderSeed = model.effectiveOrderSeed;
+            row.orderGenerationAttempts = model.orderGenerationAttempts;
             row.referenceFeasible = model.referenceDetail.isFeasible;
             row.referenceCost = model.referenceCost;
             row.initialFeasible = result.plans{1}.Detail.isFeasible;
@@ -58,6 +61,9 @@ for levelIndex = 1:numel(options.levels)
             T.orderSeed = repmat(cfg.orderSeed,height(T),1);
             T.eventSeed = repmat(cfg.eventSeed,height(T),1);
             T.algorithmSeed = repmat(seed,height(T),1);
+            T.effectiveOrderSeed = repmat(model.effectiveOrderSeed,height(T),1);
+            T.orderGenerationAttempts = ...
+                repmat(model.orderGenerationAttempts,height(T),1);
             if isempty(eventRows), eventRows = T; else, eventRows = [eventRows;T]; end
             row.eventAppliedRate = mean(double(T.eventApplied));
             addMask = strcmp(T.eventType,'add');

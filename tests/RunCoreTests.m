@@ -9,6 +9,18 @@ cfg.level = 'mild';
 model = CreateModel(cfg);
 assert(ValidateScenario(model).ok);
 assert(model.referenceDetail.isFeasible);
+retryCfg = cfg;
+retryCfg.terrainSeed = 20350003;
+retryCfg.orderSeed = 20351103;
+retry = CreateModel(retryCfg);
+assert(retry.referenceDetail.isFeasible);
+assert(retry.orderGenerationAttempts>=2);
+assert(retry.effectiveOrderSeed==retryCfg.orderSeed ...
+    + (retry.orderGenerationAttempts-1)*1000003);
+retryAgain = CreateModel(retryCfg);
+assert(retryAgain.effectiveOrderSeed==retry.effectiveOrderSeed);
+assert(isequal([retryAgain.orders.xyz],[retry.orders.xyz]));
+assert(abs(retryAgain.referenceCost-retry.referenceCost)<1e-10);
 assert(isequal(sort(model.referenceRoute(:)'), ...
     sort(model.initialState.activeOrderIDs(:)')));
 for e = model.events(:)'

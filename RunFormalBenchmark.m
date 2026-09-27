@@ -13,7 +13,8 @@ rows = repmat(struct('level','','run',0,'algorithm','','eventIndex',0, ...
     'isFeasible',false,'eventSeverity',NaN,'responseTime',NaN, ...
     'functionEvaluations',0,'firstFeasibleFE',inf, ...
     'severityOrderChange',NaN,'severityUrgency',NaN, ...
-    'severityRouteImpact',NaN,'guideWeight',NaN),0,1);
+    'severityRouteImpact',NaN,'guideWeight',NaN, ...
+    'effectiveOrderSeed',0,'orderGenerationAttempts',0),0,1);
 recoveryRows = table();
 
 for levelIndex = 1:numel(levels)
@@ -48,6 +49,8 @@ for levelIndex = 1:numel(levels)
                 row.level = levels{levelIndex};
                 row.run = runIndex;
                 row.algorithm = algorithm;
+                row.effectiveOrderSeed = model.effectiveOrderSeed;
+                row.orderGenerationAttempts = model.orderGenerationAttempts;
                 rows(end+1) = row; %#ok<AGROW>
                 h = result.histories{e+1};
                 n = numel(h.FE);

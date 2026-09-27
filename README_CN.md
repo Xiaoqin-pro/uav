@@ -116,3 +116,7 @@ The development runner now records `firstFeasibleFE` for each event and writes `
 ## Independent routing baseline and primary metric
 
 `Warm_ALNS.m` is an ALNS-inspired clean-room baseline, not a verified reproduction of a published implementation. It shares the same full-route evaluator and FE cap, while surrogate/operator overhead is reflected in response time. `SummarizeAddRecovery.m` evaluates add-event recovery at the **scenario-run level**; cancellation application is reported separately. See `docs/baseline_and_endpoints.md` for the pre-holdout metric contract and baseline limitations.
+
+## Reproducible input rejection
+
+Synthetic initial routes are checked for both time and 3-D safety feasibility. An unsafe reference triggers bounded deterministic regeneration of the *whole order realization*, never silent constraint relaxation. The requested and effective order seeds and retry count are recorded; see `docs/data_rejection.md`.
