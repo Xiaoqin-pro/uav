@@ -55,7 +55,7 @@ end
 if ~isempty(intersect(state.activeOrderIDs,state.cancelledOrderIDs))
     report.errors{end+1} = 'Initial active and cancelled order sets overlap.';
 end
-if ~all(ismember([state.activeOrderIDs state.servedOrderIDs state.cancelledOrderIDs],ids))
+if ~all(ismember([state.activeOrderIDs state.servedOrderIDs state.cancelledOrderIDs state.lockedOrderIDs],ids))
     report.errors{end+1} = 'State references an unknown order ID.';
 end
 
@@ -77,3 +77,4 @@ for k = 1:numel(events)
 end
 report.ok = isempty(report.errors);
 end
+

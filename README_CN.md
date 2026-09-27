@@ -48,7 +48,7 @@ setup;
 RunSmokeTest;
 ```
 
-当前 smoke test 会：
+当前 main.m 和 smoke test 会：
 
 1. 生成固定随机种子的三维场景；
 2. 生成初始订单和动态事件；
@@ -70,6 +70,8 @@ EAT_PSO.m       事件感知种群迁移 PSO
 CreateModel.m   场景生成入口
 Fitness.m       路线适应度入口
 DynamicEvent.m  动态事件入口
+ExecuteUntilEvent.m  执行到事件时刻并更新无人机状态
+RunEpisode.m    按事件序列运行完整动态过程
 PlotSolution.m  结果绘图入口
 ```
 
@@ -83,4 +85,6 @@ main;
 ```
 
 `main.m` 当前只是小规模演示入口，正式论文实验不会使用该演示规模，也不会把演示输出直接当作论文结论。
+
+
 

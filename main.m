@@ -26,20 +26,24 @@ maxgen = 6;
 seed = 20261001;
 [Best0,T0,stats0] = PSO(model,state,maxgen,Particle_Number,seed);
 
-%% Apply the first dynamic order event
-[eventModel,eventState,applied] = DynamicEvent(model,state,model.events(1));
+%% Execute until the first dynamic order event, then apply it
+[eventState,remainingRoute,executionLog] = ExecuteUntilEvent( ...
+    model,state,Best0.Route,model.events(1).time);
+previousBeforeEvent = Best0;
+previousBeforeEvent.Route = remainingRoute;
+[eventModel,eventState,applied] = DynamicEvent(model,eventState,model.events(1));
 assert(applied,'The first dynamic event was not applied.');
 
 %% Replan after the event: baseline versus event-aware PSO
 [WarmBest,TWarm,statsWarm] = PSO(eventModel,eventState,maxgen,Particle_Number,seed+1);
 [EATBest,TEAT,statsEAT] = EAT_PSO(eventModel,eventState,maxgen, ...
-    Particle_Number,Best0,seed+2);
+    Particle_Number,previousBeforeEvent,seed+2);
 
 %% Save machine-readable demo output
 outDir = fullfile(root,'results');
 if ~exist(outDir,'dir'), mkdir(outDir); end
 save(fullfile(outDir,'main_demo.mat'),'model','state','Best0','T0', ...
-    'stats0','eventModel','eventState','WarmBest','TWarm','statsWarm', ...
+    'stats0','executionLog','remainingRoute','eventModel','eventState','WarmBest','TWarm','statsWarm', ...
     'EATBest','TEAT','statsEAT');
 PlotSolution(eventModel,eventState,EATBest, ...
     fullfile(outDir,'main_eat_pso_route.png'));
@@ -59,3 +63,4 @@ fprintf('Initial route cost: %.3f\n',Best0.Cost);
 fprintf('Warm-start cost after event: %.3f\n',WarmBest.Cost);
 fprintf('EAT-PSO cost after event: %.3f\n',EATBest.Cost);
 fprintf('Estimated event severity: %.3f\n',statsEAT.eventSeverity);
+

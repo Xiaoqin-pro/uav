@@ -19,6 +19,10 @@ state.activeOrderIDs = initialIDs;
 state.servedOrderIDs = zeros(1,0);
 state.cancelledOrderIDs = zeros(1,0);
 state.committedRoute = zeros(1,0);
+state.lockedOrderIDs = zeros(1,0);
+state.inFlightOrderID = 0;
+state.inServiceOrderID = 0;
+state.status = 'idle';
 
 scenario.env = env;
 scenario.orders = orders;
@@ -27,3 +31,4 @@ scenario.initialState = state;
 scenario.config = cfg;
 scenario.schemaVersion = '0.1-data-contract';
 end
+

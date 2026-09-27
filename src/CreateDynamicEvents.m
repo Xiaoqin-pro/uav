@@ -15,7 +15,7 @@ n = min(4,numel(futureIDs));
 events = repmat(struct('time',0,'type','','orderIDs',[], ...
     'description',''),n+2,1);
 for k = 1:n
-    events(k).time = 180 + 70*(k-1);
+    events(k).time = orders(futureIDs(k)).releaseTime;
     events(k).type = 'add';
     events(k).orderIDs = futureIDs(k);
     events(k).description = sprintf('new order %d arrives',futureIDs(k));
@@ -31,3 +31,4 @@ end
 events = events(idx);
 rng(oldRng);
 end
+
