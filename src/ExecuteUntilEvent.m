@@ -1,117 +1,98 @@
 function [state,remainingRoute,log] = ExecuteUntilEvent(scenario,state,plannedRoute,eventTime)
-%EXECUTEUNTILEVENT Advance the UAV until a dynamic event time.
-%   The planned route is executed continuously. If the event occurs while
-%   flying, waiting, or servicing, the current order becomes locked and the
-%   returned state is the state at the event time.
-if nargin < 4, error('scenario, state, plannedRoute and eventTime are required'); end
+%EXECUTEUNTILEVENT Execute a committed route up to the next event.
+%   An in-progress flight/wait/service retains its original completion
+%   times across repeated events. The current target is a fixed prefix.
 if eventTime < state.time-1e-10
-    error('eventTime must not be earlier than state.time.');
+    error('eventTime must not precede the current state time.');
 end
 route = plannedRoute(:)';
-currentPosition = state.position;
-currentTime = state.time;
+log = repmat(struct('orderID',0,'status','','arrivalTime',NaN, ...
+    'serviceStart',NaN,'serviceEnd',NaN),0,1);
 remainingRoute = route;
-log = repmat(struct('orderID',0,'status','','startTime',0, ...
-    'endTime',0,'arrivalTime',NaN,'serviceStart',NaN,'serviceEnd',NaN),0,1);
+if ~isfield(state,'pending') || isempty(state.pending)
+    state.pending = struct('id',0,'departureTime',NaN, ...
+        'arrivalTime',NaN,'serviceStart',NaN,'serviceEnd',NaN, ...
+        'points',zeros(0,3));
+end
+k = 1;
+while k <= numel(route)
+    id = route(k);
+    if ~ismember(id,state.activeOrderIDs), k = k+1; continue; end
+    idx = find([scenario.orders.id] == id,1);
+    if state.pending.id ~= id
+        if eventTime <= state.time+1e-10, break; end
+        if state.pending.id ~= 0
+            error('The committed target %d cannot be reordered.',state.pending.id);
+        end
+        order = scenario.orders(idx);
+        leg = Plan3DLeg(state.position,order.xyz,scenario.env);
+        departureTime = state.time;
+        arrival = departureTime + leg.distance/scenario.env.speed;
+        start = max([arrival,order.releaseTime,order.readyTime]);
+        state.pending = struct('id',id,'departureTime',departureTime, ...
+            'arrivalTime',arrival,'serviceStart',start, ...
+            'serviceEnd',start+order.serviceTime,'points',leg.points);
+    end
+    p = state.pending;
+    if eventTime < p.serviceEnd-1e-10
+        state.time = eventTime;
+        if eventTime < p.arrivalTime-1e-10
+            distance = max(0,eventTime-p.departureTime)*scenario.env.speed;
+            state.position = PointAlongPolyline(p.points,distance);
+            state.status = 'in-flight';
+            state.inFlightOrderID = id;
+            state.inServiceOrderID = 0;
+        else
+            state.position = scenario.orders(idx).xyz;
+            state.status = 'waiting';
+            if eventTime >= p.serviceStart-1e-10
+                state.status = 'servicing';
+            end
+            state.inFlightOrderID = 0;
+            state.inServiceOrderID = id;
+        end
+        state.lockedOrderIDs = id;
+        state.fixedPrefixIDs = id;
+        state.committedRoute = route(k:end);
+        remainingRoute = route(k:end);
+        log(end+1) = MakeLog(id,state.status,p); %#ok<AGROW>
+        return;
+    end
+    state.position = scenario.orders(idx).xyz;
+    state.time = p.serviceEnd;
+    state.activeOrderIDs(state.activeOrderIDs==id) = [];
+    state.servedOrderIDs(end+1) = id;
+    log(end+1) = MakeLog(id,'served',p); %#ok<AGROW>
+    state.pending.id = 0;
+    k = k+1;
+end
+state.time = eventTime;
+state.status = 'idle';
 state.inFlightOrderID = 0;
 state.inServiceOrderID = 0;
 state.lockedOrderIDs = zeros(1,0);
-state.status = 'idle';
-
-for k = 1:numel(route)
-    id = route(k);
-    idx = find([scenario.orders.id] == id,1);
-    if isempty(idx) || ~ismember(id,state.activeOrderIDs)
-        continue;
-    end
-    order = scenario.orders(idx);
-    leg = Plan3DLeg(currentPosition,order.xyz,scenario.env);
-    travelTime = leg.distance/scenario.env.speed;
-    arrivalTime = currentTime + travelTime;
-
-    if eventTime < arrivalTime-1e-10
-        travelled = max(0,eventTime-currentTime)*scenario.env.speed;
-        state.position = PointAlongPolyline(leg.points,travelled);
-        state.time = eventTime;
-        state.inFlightOrderID = id;
-        state.lockedOrderIDs = id;
-        state.status = 'in-flight';
-        remainingRoute = route(k:end);
-        log(end+1) = MakeLog(id,'in-flight',currentTime,eventTime, ...
-            arrivalTime,NaN,NaN); %#ok<AGROW>
-        state.committedRoute = remainingRoute;
-        return;
-    end
-
-    serviceStart = max([arrivalTime,order.releaseTime,order.readyTime]);
-    if eventTime < serviceStart-1e-10
-        state.position = order.xyz;
-        state.time = eventTime;
-        state.inServiceOrderID = id;
-        state.lockedOrderIDs = id;
-        state.status = 'waiting';
-        remainingRoute = route(k:end);
-        log(end+1) = MakeLog(id,'waiting',currentTime,eventTime, ...
-            arrivalTime,serviceStart,NaN); %#ok<AGROW>
-        state.committedRoute = remainingRoute;
-        return;
-    end
-
-    serviceEnd = serviceStart + order.serviceTime;
-    if eventTime < serviceEnd-1e-10
-        state.position = order.xyz;
-        state.time = eventTime;
-        state.inServiceOrderID = id;
-        state.lockedOrderIDs = id;
-        state.status = 'servicing';
-        remainingRoute = route(k:end);
-        log(end+1) = MakeLog(id,'servicing',currentTime,eventTime, ...
-            arrivalTime,serviceStart,serviceEnd); %#ok<AGROW>
-        state.committedRoute = remainingRoute;
-        return;
-    end
-
-    currentPosition = order.xyz;
-    currentTime = serviceEnd;
-    state.activeOrderIDs(state.activeOrderIDs==id) = [];
-    state.servedOrderIDs(end+1) = id;
-    scenario.orders(idx).status = 'served';
-    log(end+1) = MakeLog(id,'served',currentTime-serviceEnd,currentTime, ...
-        arrivalTime,serviceStart,serviceEnd); %#ok<AGROW>
-    remainingRoute = route(k+1:end);
-end
-
-state.position = currentPosition;
-state.time = eventTime;
+state.fixedPrefixIDs = zeros(1,0);
+remainingRoute = route(k:end);
 state.committedRoute = remainingRoute;
-state.status = 'idle';
 end
 
 function p = PointAlongPolyline(points,distance)
-if isempty(points), p = [0 0 0]; return; end
-if size(points,1)==1, p = points(1,:); return; end
 seg = diff(points,1,1);
 len = sqrt(sum(seg.^2,2));
 target = min(max(distance,0),sum(len));
-if target <= 0, p = points(1,:); return; end
 acc = 0;
 for k = 1:numel(len)
     if target <= acc+len(k) || k==numel(len)
-        ratio = (target-acc)/max(len(k),eps);
-        p = points(k,:) + ratio*seg(k,:);
+        p = points(k,:) + (target-acc)/max(len(k),eps)*seg(k,:);
         return;
     end
-    acc = acc + len(k);
+    acc = acc+len(k);
 end
 p = points(end,:);
 end
 
-function item = MakeLog(id,status,startTime,endTime,arrival,serviceStart,serviceEnd)
-item.orderID = id;
-item.status = status;
-item.startTime = startTime;
-item.endTime = endTime;
-item.arrivalTime = arrival;
-item.serviceStart = serviceStart;
-item.serviceEnd = serviceEnd;
+function item = MakeLog(id,status,p)
+item = struct('orderID',id,'status',status, ...
+    'arrivalTime',p.arrivalTime,'serviceStart',p.serviceStart, ...
+    'serviceEnd',p.serviceEnd);
 end

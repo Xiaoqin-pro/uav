@@ -35,7 +35,8 @@ previousBeforeEvent.Route = remainingRoute;
 assert(applied,'The first dynamic event was not applied.');
 
 %% Replan after the event: baseline versus event-aware PSO
-[WarmBest,TWarm,statsWarm] = PSO(eventModel,eventState,maxgen,Particle_Number,seed+1);
+[WarmBest,TWarm,statsWarm] = Warm_PSO(eventModel,eventState,maxgen, ...
+    Particle_Number,previousBeforeEvent,seed+1);
 [EATBest,TEAT,statsEAT] = EAT_PSO(eventModel,eventState,maxgen, ...
     Particle_Number,previousBeforeEvent,seed+2);
 
@@ -63,4 +64,3 @@ fprintf('Initial route cost: %.3f\n',Best0.Cost);
 fprintf('Warm-start cost after event: %.3f\n',WarmBest.Cost);
 fprintf('EAT-PSO cost after event: %.3f\n',EATBest.Cost);
 fprintf('Estimated event severity: %.3f\n',statsEAT.eventSeverity);
-

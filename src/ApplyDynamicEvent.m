@@ -5,6 +5,12 @@ function [scenario,state,applied] = ApplyDynamicEvent(scenario,state,event)
 if nargin < 3, error('scenario, state and event are required'); end
 applied = false;
 ids = event.orderIDs(:)';
+preIDs = state.activeOrderIDs;
+preIdx = ismember([scenario.orders.id],preIDs);
+state.lastEvent = struct('time',event.time,'type',event.type, ...
+    'orderIDs',ids,'preActiveIDs',preIDs, ...
+    'preReadyTimes',[scenario.orders(preIdx).readyTime], ...
+    'preDueTimes',[scenario.orders(preIdx).dueTime]);
 for id = ids
     idx = find([scenario.orders.id] == id,1);
     if isempty(idx), continue; end
@@ -31,9 +37,12 @@ for id = ids
 end
 state.time = max(state.time,event.time);
 if ~isfield(state,'eventLog'), state.eventLog = {}; end
+state.lastEvent.postActiveIDs = state.activeOrderIDs;
+postIdx = ismember([scenario.orders.id],state.activeOrderIDs);
+state.lastEvent.postReadyTimes = [scenario.orders(postIdx).readyTime];
+state.lastEvent.postDueTimes = [scenario.orders(postIdx).dueTime];
+state.lastEvent.applied = applied;
+state.lastEvent.description = event.description;
 state.eventLog{end+1} = struct('time',event.time,'type',event.type, ...
     'orderIDs',ids,'applied',applied,'description',event.description);
 end
-
-
-

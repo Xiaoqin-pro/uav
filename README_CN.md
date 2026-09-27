@@ -92,8 +92,14 @@ main;
 ```
 
 `main.m` 当前只是小规模演示入口，正式论文实验不会使用该演示规模，也不会把演示输出直接当作论文结论。
+## 语义审计与开发诊断
 
+外部评价中正确指出了锁定订单重排、事件严重度和难度校准问题。修复过程及未解决局限记录于 `docs/review_and_calibration.md`。当前所有 CSV/MAT 都是开发诊断，不得直接用于论文。
 
+```matlab
+addpath('tests'); RunCoreTests;             % 状态和 FE 不变量
+RunDifficultyCalibration;                   % 仅 PSO/Warm-PSO 的盲校准
+RunAblation;                                % 两个机制的开发级消融
+```
 
-
-
+根目录还提供 `Warm_PSO.m`、`RunDifficultyCalibration.m` 和 `RunAblation.m`。正式实验须先冻结场景生成规则、独立种子及统计口径。

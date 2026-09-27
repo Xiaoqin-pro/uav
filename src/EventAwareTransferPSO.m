@@ -1,19 +1,40 @@
 function [bestSol,history,stats] = EventAwareTransferPSO(scenario,state,options,previousSolution)
-%EVENTAWARETRANSFERPSO Event-aware population-transfer Random-key PSO.
-%   The first research implementation contains two deliberately small
-%   mechanisms:
-%   1) multi-source population reconstruction after an order event;
-%   2) event-severity-dependent mixing of historical and current guides.
+%EVENTAWARETRANSFERPSO Event-aware transfer Random-key PSO.
+%   The search space excludes state.fixedPrefixIDs. The locked prefix is
+%   prepended to every candidate route before route evaluation.
 if nargin < 3, options = struct(); end
 if nargin < 4, previousSolution = []; end
 options = FillOptions(options);
 if ~isempty(options.seed), rng(options.seed,'twister'); end
 
-activeIDs = state.activeOrderIDs(:)';
+allActiveIDs = state.activeOrderIDs(:)';
+fixedPrefix = GetFixedPrefix(state,allActiveIDs);
+activeIDs = setdiff(allActiveIDs,fixedPrefix,'stable');
 nVar = numel(activeIDs);
-if nVar == 0, error('No active orders are available for planning.'); end
+if nVar == 0
+    [cost,detail] = EvaluateRoute(fixedPrefix,scenario,state);
+    bestSol = struct('Position',zeros(1,0),'Velocity',zeros(1,0), ...
+        'Cost',cost,'Route',fixedPrefix,'Detail',detail);
+    history.FE = 1;
+    history.bestCost = cost;
+    history.distance = detail.distance;
+    history.totalLate = detail.totalLate;
+    history.totalViolation = detail.totalViolation;
+    history.isFeasible = detail.isFeasible;
+    history.diversity = 0;
+    stats.functionEvaluations = 1;
+    stats.nVar = 0;
+    stats.activeOrderIDs = activeIDs;
+    stats.fixedPrefixIDs = fixedPrefix;
+    stats.eventSeverity = 0;
+    stats.severityComponents = [0 0 0];
+    stats.variant = options.variant;
+    stats.options = options;
+    return;
+end
 
-severity = EstimateEventSeverity(activeIDs,previousSolution);
+[severity,severityComponents] = EstimateEventSeverity( ...
+    activeIDs,previousSolution,scenario,state);
 oldGuide = BuildHistoricalGuide(activeIDs,previousSolution);
 
 nPop = options.nPop;
@@ -29,13 +50,20 @@ GlobalBest.Cost = inf;
 functionEvaluations = 0;
 sourceLabels = strings(nPop,1);
 
+if isempty(previousSolution)
+    guideWeight = 1;  % No historical memory exists at initial planning.
+elseif strcmpi(options.variant,'fixed-severity')
+    guideWeight = options.fixedGuideWeight;
+else
+    guideWeight = severity;
+end
 for i = 1:nPop
     [position,sourceLabels(i)] = InitializePosition(i,nPop,activeIDs, ...
-        oldGuide,severity,previousSolution);
+        oldGuide,guideWeight,previousSolution,options,scenario,state);
     particle(i).Position = position;
     particle(i).Velocity = zeros(1,nVar);
     [particle(i).Cost,particle(i).Route,particle(i).Detail] = ...
-        EvaluatePosition(position,activeIDs,scenario,state);
+        EvaluatePosition(position,activeIDs,fixedPrefix,scenario,state);
     functionEvaluations = functionEvaluations + 1;
     particle(i).Best = particle(i);
     if CompareRouteDetails(particle(i).Cost,particle(i).Detail, ...
@@ -53,10 +81,8 @@ history.isFeasible = GlobalBest.Detail.isFeasible;
 history.diversity = PopulationDiversity(particle);
 
 w = options.w;
+
 for it = 1:options.maxIt
-    % Mild events retain more historical direction; severe events rely more
-    % on the current event-specific global best.
-    guideWeight = severity;
     mixedGuide = MixGuides(oldGuide,GlobalBest.Position,guideWeight);
     for i = 1:nPop
         if functionEvaluations >= options.maxFE, break; end
@@ -68,7 +94,7 @@ for it = 1:options.maxIt
         particle(i).Position = particle(i).Position + particle(i).Velocity;
         particle(i).Position = max(0,min(1,particle(i).Position));
         [particle(i).Cost,particle(i).Route,particle(i).Detail] = ...
-            EvaluatePosition(particle(i).Position,activeIDs,scenario,state);
+            EvaluatePosition(particle(i).Position,activeIDs,fixedPrefix,scenario,state);
         functionEvaluations = functionEvaluations + 1;
         if CompareRouteDetails(particle(i).Cost,particle(i).Detail, ...
                 particle(i).Best.Cost,particle(i).Best.Detail)
@@ -95,25 +121,31 @@ bestSol.Route = GlobalBest.Route;
 stats.functionEvaluations = functionEvaluations;
 stats.nVar = nVar;
 stats.activeOrderIDs = activeIDs;
+stats.fixedPrefixIDs = fixedPrefix;
 stats.eventSeverity = severity;
+stats.severityComponents = severityComponents;
 stats.sourceLabels = sourceLabels;
-stats.historicalGuide = oldGuide;
+stats.variant = options.variant;
 stats.options = options;
 end
 
-function [position,label] = InitializePosition(index,nPop,activeIDs,oldGuide,severity,previousSolution)
+function [position,label] = InitializePosition(index,nPop,activeIDs,oldGuide, ...
+    severity,previousSolution,options,scenario,state)
 nVar = numel(activeIDs);
-if index <= floor(0.40*nPop) && ~isempty(previousSolution)
+if strcmpi(options.variant,'no-reconstruction')
+    position = rand(1,nVar);
+    label = "random-no-reconstruction";
+    return;
+end
+historicalShare = max(0.15,0.60-0.40*severity);
+if index <= floor(historicalShare*nPop) && ~isempty(previousSolution)
     route = PositionToRoute(oldGuide,activeIDs);
     position = RouteToPosition(route,activeIDs,0.025);
     label = "historical-transfer";
-elseif index <= floor(0.70*nPop)
-    route = activeIDs(randperm(nVar));
-    if ~isempty(previousSolution) && severity < 0.75
-        oldRoute = PositionToRoute(oldGuide,activeIDs);
-        route = InsertNewOrders(route,oldRoute,activeIDs);
-    end
-    position = RouteToPosition(route,activeIDs,0.05);
+elseif index <= floor(min(0.90,historicalShare+0.25)*nPop) ...
+        && ~isempty(previousSolution)
+    route = BuildInsertionRoute(previousSolution.Route,activeIDs,scenario,state);
+    position = RouteToPosition(route,activeIDs,0.01);
     label = "event-insertion";
 else
     position = rand(1,nVar);
@@ -121,28 +153,43 @@ else
 end
 end
 
-function route = InsertNewOrders(route,oldRoute,activeIDs)
-% Preserve a few historically useful adjacent pairs, without locking them.
-if isempty(oldRoute), return; end
-keep = intersect(oldRoute,activeIDs,'stable');
-if numel(keep) < 2, return; end
-pairStart = randi([1,max(1,numel(keep)-1)]);
-pair = keep(pairStart:min(pairStart+1,numel(keep)));
-route(ismember(route,pair)) = [];
-pos = randi([1,numel(route)+1]);
-route = [route(1:pos-1),pair,route(pos:end)];
+function route = BuildInsertionRoute(previousRoute,activeIDs,scenario,state)
+% Cheap surrogate insertion: no calls to the full objective are hidden.
+route = intersect(previousRoute(:)',activeIDs,'stable');
+missing = setdiff(activeIDs,route,'stable');
+for id = missing
+    cost = zeros(1,numel(route)+1);
+    for pos = 1:numel(cost)
+        candidate = [route(1:pos-1),id,route(pos:end)];
+        cost(pos) = SurrogateSchedule(candidate,scenario,state);
+    end
+    [~,rank] = sort(cost);
+    % Sample from the three best positions to retain diversity.
+    shortlist = rank(1:min(3,numel(rank)));
+    pos = shortlist(randi(numel(shortlist)));
+    route = [route(1:pos-1),id,route(pos:end)];
+end
 end
 
-function severity = EstimateEventSeverity(activeIDs,previousSolution)
-if isempty(previousSolution) || ~isfield(previousSolution,'Route') || isempty(previousSolution.Route)
-    severity = 1.0;
-    return;
+function value = SurrogateSchedule(route,scenario,state)
+p = state.position;
+t = state.time;
+value = 0;
+for id = route
+    o = scenario.orders([scenario.orders.id]==id);
+    d = norm(o.xyz-p);
+    t = max([t+d/scenario.env.speed,o.readyTime,o.releaseTime]);
+    value = value+d+scenario.env.speed*max(0,t-o.dueTime);
+    t = t+o.serviceTime;
+    p = o.xyz;
 end
-oldIDs = previousSolution.Route(:)';
-newCount = numel(setdiff(activeIDs,oldIDs));
-cancelCount = numel(setdiff(oldIDs,activeIDs));
-severity = (newCount+cancelCount)/max(numel(activeIDs),numel(oldIDs));
-severity = max(0,min(1,severity));
+end
+function fixedPrefix = GetFixedPrefix(state,activeIDs)
+if isfield(state,'fixedPrefixIDs') && ~isempty(state.fixedPrefixIDs)
+    fixedPrefix = intersect(state.fixedPrefixIDs(:)',activeIDs,'stable');
+else
+    fixedPrefix = zeros(1,0);
+end
 end
 
 function guide = BuildHistoricalGuide(activeIDs,previousSolution)
@@ -166,13 +213,13 @@ function position = RouteToPosition(route,activeIDs,jitter)
 if nargin < 3, jitter = 0; end
 n = numel(activeIDs);
 position = zeros(1,n);
+route = intersect(route(:)',activeIDs,'stable');
+route = [route,setdiff(activeIDs,route,'stable')];
 for k = 1:numel(route)
     idx = find(activeIDs==route(k),1);
     if ~isempty(idx), position(idx) = (k-1)/max(1,n-1); end
 end
-if jitter > 0
-    position = position + jitter*randn(size(position));
-end
+if jitter > 0, position = position + jitter*randn(size(position)); end
 position = max(0,min(1,position));
 end
 
@@ -182,9 +229,9 @@ if isempty(oldGuide), guide = currentGuide; return; end
 guide = (1-severity)*oldGuide + severity*currentGuide;
 end
 
-function [cost,route,detail] = EvaluatePosition(position,activeIDs,scenario,state)
+function [cost,route,detail] = EvaluatePosition(position,activeIDs,fixedPrefix,scenario,state)
 [~,order] = sort(position,'ascend');
-route = activeIDs(order);
+route = [fixedPrefix,activeIDs(order)];
 [cost,detail] = EvaluateRoute(route,scenario,state);
 end
 
@@ -197,7 +244,8 @@ end
 function options = FillOptions(options)
 defaults = struct('nPop',30,'maxIt',100,'maxFE',3000, ...
     'w',0.9,'wdamp',0.99,'c1',1.5,'c2',1.5, ...
-    'velocityRatio',0.2,'seed',20260931);
+    'velocityRatio',0.2,'seed',20260931,'variant','full', ...
+    'fixedGuideWeight',0.5);
 fields = fieldnames(defaults);
 for k = 1:numel(fields)
     if ~isfield(options,fields{k}) || isempty(options.(fields{k}))
@@ -205,4 +253,3 @@ for k = 1:numel(fields)
     end
 end
 end
-

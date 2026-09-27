@@ -18,6 +18,12 @@ switch level
         error('Unknown scenario level: %s',cfg.level);
 end
 
+if isfield(cfg,'windowLengthOverride') && ~isempty(cfg.windowLengthOverride)
+    windowLength = cfg.windowLengthOverride;
+end
+if ~isfield(cfg,'releaseStart'), cfg.releaseStart = 180; end
+if ~isfield(cfg,'releaseInterval'), cfg.releaseInterval = 40; end
+assert(windowLength>0 && cfg.releaseStart>=0 && cfg.releaseInterval>0);
 oldRng = rng;
 rng(cfg.orderSeed,'twister');
 N = cfg.nInitialOrders + cfg.nFutureOrders;
@@ -30,7 +36,8 @@ xyz = [xy, repmat(env.flightAltitude,N,1)];
 % Windows are generated in two difficulty bands. The initial set is
 % intentionally moderate; the experiment scripts will create stress cases.
 release = zeros(N,1);
-release(cfg.nInitialOrders+1:end) = 180 + 40*(0:cfg.nFutureOrders-1);
+release(cfg.nInitialOrders+1:end) = cfg.releaseStart ...
+    + cfg.releaseInterval*(0:cfg.nFutureOrders-1);
 ready = 15 + readyStep*(0:N-1)';
 ready(cfg.nInitialOrders+1:end) = release(cfg.nInitialOrders+1:end) + 10;
 due = ready + windowLength;
@@ -56,6 +63,3 @@ for i = 1:N
 end
 rng(oldRng);
 end
-
-
-

@@ -22,12 +22,29 @@ for k = 1:numel(routeIDs)
         error('Unknown order id %d.',routeIDs(k));
     end
     order = orders(idx);
-    leg = Plan3DLeg(currentPosition,order.xyz,env);
-    arrival = currentTime + leg.distance/env.speed;
-    serviceStart = max(arrival,order.readyTime);
+    isPending = k==1 && isfield(state,'pending') && ...
+        state.pending.id==order.id;
+    if isPending
+        pending = state.pending;
+        arrival = pending.arrivalTime;
+        serviceStart = pending.serviceStart;
+        leg.points = pending.points;
+        leg.distance = max(0,arrival-currentTime)*env.speed;
+        leg.totalViolation = 0;
+        leg.smoothness = 0;
+        leg.minClearance = inf;
+    else
+        leg = Plan3DLeg(currentPosition,order.xyz,env);
+        arrival = currentTime + leg.distance/env.speed;
+        serviceStart = max([arrival,order.releaseTime,order.readyTime]);
+    end
     late = max(0,serviceStart-order.dueTime);
-    waiting = max(0,serviceStart-arrival);
-    currentTime = serviceStart + order.serviceTime;
+    waiting = max(0,serviceStart-max(arrival,currentTime));
+    if isPending
+        currentTime = pending.serviceEnd;
+    else
+        currentTime = serviceStart + order.serviceTime;
+    end
     currentPosition = order.xyz;
 
     totalDistance = totalDistance + leg.distance;
@@ -62,4 +79,3 @@ detail.isFeasible = totalViolation <= 1e-9 && totalLate <= 1e-9;
 detail.comparisonVector = [totalViolation,totalLate, ...
     totalDistance+env.smoothPenalty*totalSmoothness];
 end
-

@@ -21,9 +21,14 @@ state.servedOrderIDs = zeros(1,0);
 state.cancelledOrderIDs = zeros(1,0);
 state.committedRoute = zeros(1,0);
 state.lockedOrderIDs = zeros(1,0);
+state.fixedPrefixIDs = zeros(1,0);
+state.lastEvent = struct();
 state.inFlightOrderID = 0;
 state.inServiceOrderID = 0;
 state.status = 'idle';
+state.pending = struct('id',0,'departureTime',NaN, ...
+    'arrivalTime',NaN,'serviceStart',NaN,'serviceEnd',NaN, ...
+    'points',zeros(0,3));
 
 scenario.env = env;
 scenario.orders = orders;
@@ -33,5 +38,3 @@ scenario.config = cfg;
 scenario.schemaVersion = '0.2-dynamic-execution';
 scenario.level = lower(char(cfg.level));
 end
-
-

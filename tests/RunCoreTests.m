@@ -1,0 +1,65 @@
+function RunCoreTests
+%RUNCORETESTS Hand-checkable state and optimizer invariants.
+root = fileparts(fileparts(mfilename('fullpath')));
+addpath(root); addpath(fullfile(root,'src'));
+cfg.nInitialOrders = 4;
+cfg.nFutureOrders = 2;
+cfg.safetySamples = 8;
+cfg.level = 'mild';
+model = CreateModel(cfg);
+assert(ValidateScenario(model).ok);
+state = model.initialState;
+route = state.activeOrderIDs;
+first = route(1);
+leg = Plan3DLeg(state.position,model.orders(first).xyz,model.env);
+arrival = leg.distance/model.env.speed;
+
+% Two events during the same committed flight retain the original arrival.
+[state,remaining] = ExecuteUntilEvent(model,state,route,arrival/3);
+assert(strcmp(state.status,'in-flight') && state.fixedPrefixIDs==first);
+assert(abs(state.pending.arrivalTime-arrival)<1e-10);
+[state,remaining] = ExecuteUntilEvent(model,state,remaining,arrival*2/3);
+assert(state.fixedPrefixIDs==first && abs(state.pending.arrivalTime-arrival)<1e-10);
+[cost,detail] = EvaluateRoute(remaining,model,state); %#ok<ASGLU>
+assert(abs(detail.records(1,3)-arrival)<1e-10);
+
+% Cancellation of the committed target must not change the active set.
+event = struct('time',state.time,'type','cancel', ...
+    'orderIDs',first,'description','locked-target cancellation');
+[model,state,applied] = ApplyDynamicEvent(model,state,event);
+assert(~applied && ismember(first,state.activeOrderIDs));
+[plan,~,stats] = PSO(model,state,2,4,31415);
+assert(plan.Route(1)==first && stats.nVar==numel(route)-1);
+assert(stats.functionEvaluations==8);
+[alt,~,altStats] = EAT_PSO(model,state,2,4,plan,31415);
+assert(alt.Route(1)==first && altStats.functionEvaluations==8);
+
+% A service may not be restarted after an event in the servicing interval.
+serviceStart = state.pending.serviceStart;
+serviceEnd = state.pending.serviceEnd;
+[state,remaining] = ExecuteUntilEvent(model,state,remaining, ...
+    (serviceStart+serviceEnd)/2);
+assert(strcmp(state.status,'servicing'));
+assert(state.pending.serviceEnd==serviceEnd);
+[state,remaining] = ExecuteUntilEvent(model,state,remaining,serviceEnd);
+assert(ismember(first,state.servedOrderIDs));
+assert(~ismember(first,state.activeOrderIDs));
+assert(state.pending.id~=first);
+
+% Generated add event changes order set and yields bounded impact features.
+future = model.events(strcmp({model.events.type},'add'));
+event = future(1); event.time = state.time;
+[model,state,applied] = ApplyDynamicEvent(model,state,event);
+assert(applied);
+[severity,components] = EstimateEventSeverity( ...
+    state.activeOrderIDs,plan,model,state);
+assert(all(components>=0 & components<=1) && severity>=0 && severity<=1);
+assert(severity>0);
+for variant = {'full','no-reconstruction','fixed-severity'}
+    [solution,~,st] = EAT_PSO(model,state,2,4,plan,27182,variant{1});
+    assert(st.functionEvaluations==8);
+    assert(numel(unique(solution.Route))==numel(state.activeOrderIDs));
+    assert(all(ismember(solution.Route,state.activeOrderIDs)));
+end
+fprintf('Core tests passed: locked prefix, repeated event, service, FE and severity.\n');
+end
