@@ -112,3 +112,7 @@ Current initial-order windows are constructed from a deterministic, independentl
 ## Event recovery diagnostics
 
 The development runner now records `firstFeasibleFE` for each event and writes `<outputStem>_recovery.csv` with post-event FE, lateness, safety violation and feasibility at each checkpoint. `SummarizeDynamicRuns` first aggregates correlated events within a scenario run; `PlotRecoveryDiagnostic` generates a run-level-aggregated, explicitly exploratory recovery plot. These are diagnostic utilities, **not** a substitute for the eventual 30 disjoint holdout scenarios and an independent strong baseline.
+
+## Independent routing baseline and primary metric
+
+`Warm_ALNS.m` is an ALNS-inspired clean-room baseline, not a verified reproduction of a published implementation. It shares the same full-route evaluator and FE cap, while surrogate/operator overhead is reflected in response time. `SummarizeAddRecovery.m` evaluates add-event recovery at the **scenario-run level**; cancellation application is reported separately. See `docs/baseline_and_endpoints.md` for the pre-holdout metric contract and baseline limitations.

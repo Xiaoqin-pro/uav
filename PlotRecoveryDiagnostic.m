@@ -4,8 +4,8 @@ function [runTable,summaryTable] = PlotRecoveryDiagnostic(csvPath,outputStem)
 %   This is a diagnostic plot, not an independent-event significance test.
 if nargin < 2 || isempty(outputStem), outputStem = 'recovery_diagnostic'; end
 T = readtable(csvPath);
-T = T(logical(T.eventApplied),:);
-if isempty(T), error('No applied events are available.'); end
+T = T(logical(T.eventApplied) & strcmp(T.eventType,'add'),:);
+if isempty(T), error('No applied add events are available.'); end
 levels = unique(T.level,'stable');
 algorithms = unique(T.algorithm,'stable');
 feValues = unique(T.FE)';
@@ -64,7 +64,7 @@ for l = 1:numel(levels)
         plot(S.FE,S.feasibleMean,'LineWidth',1.5,'DisplayName',algorithms{a});
     end
     xlabel('Full route evaluations after event');
-    ylabel('Mean run-level applied-event feasible fraction');
+    ylabel('Mean run-level add-event feasible fraction');
     ylim([0 1]); grid on;
     title(sprintf('%s: exploratory recovery (not paper evidence)',levels{l}));
     legend('Location','best');

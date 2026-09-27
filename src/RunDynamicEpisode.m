@@ -1,6 +1,6 @@
 function result = RunDynamicEpisode(model,algorithm,maxgen,Particle_Number,seed)
 %RUNDYNAMICEPISODE Execute all configured dynamic events sequentially.
-%   Supports PSO, Warm-PSO, EAT-PSO and two ablations. This is a
+%   Supports PSO, Warm-PSO, Warm-ALNS, EAT-PSO and two ablations. This is a
 %   development runner; event histories are correlated within a run.
 if nargin < 2 || isempty(algorithm), algorithm = 'PSO'; end
 if nargin < 3 || isempty(maxgen), maxgen = 20; end
@@ -114,6 +114,8 @@ if strcmpi(algorithm,'PSO')
     [plan,bestCost,stats,history] = PSO(model,state,maxgen,nPop,seed);
 elseif strcmpi(algorithm,'Warm-PSO') || strcmpi(algorithm,'Warm_PSO')
     [plan,bestCost,stats,history] = Warm_PSO(model,state,maxgen,nPop,previous,seed);
+elseif strcmpi(algorithm,'Warm-ALNS') || strcmpi(algorithm,'Warm_ALNS')
+    [plan,bestCost,stats,history] = Warm_ALNS(model,state,maxgen,nPop,previous,seed);
 elseif strcmpi(algorithm,'EAT-NoReconstruction')
     [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'no-reconstruction');
 elseif strcmpi(algorithm,'EAT-FixedSeverity')

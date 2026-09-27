@@ -41,6 +41,10 @@ assert(plan.Route(1)==first && stats.nVar==numel(route)-1);
 assert(stats.functionEvaluations==8);
 [alt,~,altStats] = EAT_PSO(model,state,2,4,plan,31415);
 assert(alt.Route(1)==first && altStats.functionEvaluations==8);
+[lns,~,lnsStats,lnsHistory] = Warm_ALNS(model,state,2,4,plan,31415);
+assert(lns.Route(1)==first && lnsStats.functionEvaluations==8);
+assert(lnsHistory.FE(end)==8);
+assert(isequal(sort(lns.Route),sort(state.activeOrderIDs(:)')));
 
 % A service may not be restarted after an event in the servicing interval.
 serviceStart = state.pending.serviceStart;
