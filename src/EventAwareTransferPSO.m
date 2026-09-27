@@ -61,7 +61,8 @@ usedSignatures = strings(0,1);
 initialDuplicateRetries = 0;
 initialUniqueExhausted = false;
 ensureUnique = strcmpi(options.variant,'paper-core') || ...
-    strcmpi(options.variant,'adaptive-transfer');
+    strcmpi(options.variant,'adaptive-transfer') || ...
+    strcmpi(options.variant,'paper-no-insertion');
 if nVar <= 8
     initialTargetUniqueCount = min(nPop,factorial(nVar));
 else
@@ -72,6 +73,7 @@ if isempty(previousSolution)
     guideWeight = 1;  % No historical memory exists at initial planning.
 elseif strcmpi(options.variant,'paper-core') || ...
         strcmpi(options.variant,'paper-no-reconstruction') || ...
+        strcmpi(options.variant,'paper-no-insertion') || ...
         strcmpi(options.variant,'fixed-severity') || ...
         strcmpi(options.variant,'no-reconstruction')
     guideWeight = options.fixedGuideWeight;
@@ -179,6 +181,7 @@ stats.initialTargetUniqueCount = initialTargetUniqueCount;
 stats.initialUniqueCount = numel(unique(usedSignatures));
 stats.initialDuplicateRetries = initialDuplicateRetries;
 stats.initialUniqueExhausted = initialUniqueExhausted;
+stats.sourceComposition = options.sourceComposition;
 stats.options = options;
 end
 

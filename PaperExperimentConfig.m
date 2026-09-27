@@ -1,7 +1,7 @@
 function o = PaperExperimentConfig
 %PAPEREXPERIMENTCONFIG Frozen candidate configuration for paper v1.
 %   Do not change after the pipeline dry run without creating a new version.
-o.version = 'paper-v1-candidate';
+o.version = 'paper-v2-candidate';
 o.levels = {'severe'};
 o.windowLengthOverride = 135;
 o.releaseStart = 45;
@@ -14,7 +14,7 @@ o.maxgen = 3;
 o.maxFE = 18;
 o.algorithms = {'PSO','Warm-PSO','Warm-ALNS','EAT-PSO'};
 o.sourceComposition = [2 3 1];
-o.ablationAlgorithms = {'EAT-PSO','EAT-NoReconstruction'};
+o.ablationAlgorithms = {'EAT-PSO','EAT-NoReconstruction','EAT-NoInsertion'};
 o.censoredFE = o.maxFE+1;
 o.primaryEventType = 'add';
 o.stats = {'mean','std','median','paired-wilcoxon','holm'};
