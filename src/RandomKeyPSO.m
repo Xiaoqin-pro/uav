@@ -24,7 +24,12 @@ GlobalBest = empty;
 GlobalBest.Cost = inf;
 
 for i = 1:nPop
-    particle(i).Position = rand(1,nVar);
+    if ~isempty(options.initialRoute) && i <= max(1,ceil(0.20*nPop))
+        particle(i).Position = RouteToPosition(options.initialRoute,activeIDs, ...
+            0.03*(i-1));
+    else
+        particle(i).Position = rand(1,nVar);
+    end
     particle(i).Velocity = zeros(1,nVar);
     [particle(i).Cost,particle(i).Route,particle(i).Detail] = ...
         EvaluatePosition(particle(i).Position,activeIDs,scenario,state);
@@ -90,10 +95,24 @@ route = activeIDs(order);
 [cost,detail] = EvaluateRoute(route,scenario,state);
 end
 
+function position = RouteToPosition(route,activeIDs,jitter)
+if nargin < 3, jitter = 0; end
+route = intersect(route(:)',activeIDs,'stable');
+route = [route,setdiff(activeIDs,route,'stable')];
+n = numel(activeIDs);
+position = zeros(1,n);
+for k = 1:numel(route)
+    idx = find(activeIDs==route(k),1);
+    if ~isempty(idx), position(idx) = (k-1)/max(1,n-1); end
+end
+if jitter > 0, position = position + jitter*randn(size(position)); end
+position = max(0,min(1,position));
+end
+
 function options = FillOptions(options)
 defaults = struct('nPop',30,'maxIt',100,'maxFE',3000, ...
     'w',0.9,'wdamp',0.99,'c1',1.5,'c2',1.5, ...
-    'velocityRatio',0.2,'seed',20260930);
+    'velocityRatio',0.2,'seed',20260930,'initialRoute',[]);
 fields = fieldnames(defaults);
 for k = 1:numel(fields)
     if ~isfield(options,fields{k}) || isempty(options.(fields{k}))
@@ -101,4 +120,5 @@ for k = 1:numel(fields)
     end
 end
 end
+
 

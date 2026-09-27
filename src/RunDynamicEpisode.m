@@ -13,7 +13,8 @@ previousSolution = [];
 plannedRoute = state.activeOrderIDs;
 records = repmat(struct('eventIndex',0,'eventTime',0,'eventType','', ...
     'eventDescription','','nServed',0,'nActive',0,'nCancelled',0, ...
-    'nLocked',0,'planCost',NaN,'isFeasible',false, ...
+    'nLocked',0,'planCost',NaN,'distance',NaN,'totalLate',NaN, ...
+    'totalViolation',NaN,'isFeasible',false,'eventSeverity',NaN, ...
     'responseTime',NaN,'functionEvaluations',0),0,1);
 plans = cell(numel(model.events)+1,1);
 
@@ -47,6 +48,13 @@ for e = 1:numel(model.events)
             Particle_Number,previousSolution,seed+e);
     end
     response = toc(t0);
+    item = records;
+    item = item([]);
+    item = struct('eventIndex',0,'eventTime',0,'eventType','', ...
+        'eventDescription','','nServed',0,'nActive',0,'nCancelled',0, ...
+        'nLocked',0,'planCost',NaN,'distance',NaN,'totalLate',NaN, ...
+        'totalViolation',NaN,'isFeasible',false,'eventSeverity',NaN, ...
+        'responseTime',NaN,'functionEvaluations',0);
     plans{e+1} = plan;
     plannedRoute = plan.Route;
     previousSolution = plan;
@@ -60,6 +68,10 @@ for e = 1:numel(model.events)
     item.nCancelled = numel(state.cancelledOrderIDs);
     item.nLocked = numel(state.lockedOrderIDs);
     item.planCost = plan.Cost;
+    item.distance = plan.Detail.distance;
+    item.totalLate = plan.Detail.totalLate;
+    item.totalViolation = plan.Detail.totalViolation;
+    if isfield(planStats,'eventSeverity'), item.eventSeverity = planStats.eventSeverity; end
     item.isFeasible = plan.Detail.isFeasible;
     item.responseTime = response;
     item.functionEvaluations = planStats.functionEvaluations;
@@ -79,6 +91,8 @@ end
 function [plan,bestCost,stats] = RunPlanner(model,state,algorithm,maxgen,nPop,previous,seed)
 if strcmpi(algorithm,'PSO')
     [plan,bestCost,stats] = PSO(model,state,maxgen,nPop,seed);
+elseif strcmpi(algorithm,'Warm-PSO') || strcmpi(algorithm,'Warm_PSO')
+    [plan,bestCost,stats] = Warm_PSO(model,state,maxgen,nPop,previous,seed);
 elseif strcmpi(algorithm,'EAT-PSO') || strcmpi(algorithm,'EAT_PSO')
     [plan,bestCost,stats] = EAT_PSO(model,state,maxgen,nPop,previous,seed);
 else
@@ -98,3 +112,5 @@ plan.Detail = struct('routeIDs',zeros(1,0),'distance',0, ...
     'finalPosition',state.position,'records',zeros(0,10), ...
     'routeLegs',{{}},'isFeasible',true);
 end
+
+

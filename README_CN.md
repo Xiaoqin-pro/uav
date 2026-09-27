@@ -47,6 +47,12 @@ cd('D:\111\Desktop\噜噜\new');
 setup;
 RunSmokeTest;
 RunScenarioAudit;
+
+% 小规模配对动态实验
+o.nRuns = 1; o.levels = {'mild'};
+o.nInitialOrders = 4; o.nFutureOrders = 2;
+o.safetySamples = 10; o.Particle_Number = 4; o.maxgen = 2;
+RunFormalBenchmark(o);
 ```
 
 当前 main.m 和 smoke test 会：
@@ -86,6 +92,7 @@ main;
 ```
 
 `main.m` 当前只是小规模演示入口，正式论文实验不会使用该演示规模，也不会把演示输出直接当作论文结论。
+
 
 
 
