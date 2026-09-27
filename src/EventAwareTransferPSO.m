@@ -56,8 +56,8 @@ sourceLabels = strings(nPop,1);
 
 if isempty(previousSolution)
     guideWeight = 1;  % No historical memory exists at initial planning.
-elseif strcmpi(options.variant,'fixed-severity')
-    guideWeight = options.fixedGuideWeight;
+elseif strcmpi(options.variant,'paper-core') || strcmpi(options.variant,'fixed-severity')
+    guideWeight = 0.5;
 else
     guideWeight = severity;
 end
@@ -144,12 +144,17 @@ end
 function [position,label] = InitializePosition(index,nPop,activeIDs,oldGuide, ...
     severity,previousSolution,options,scenario,state)
 nVar = numel(activeIDs);
-if strcmpi(options.variant,'no-reconstruction')
+if strcmpi(options.variant,'paper-no-reconstruction') || strcmpi(options.variant,'no-reconstruction')
     position = rand(1,nVar);
     label = "random-no-reconstruction";
     return;
 end
-historicalShare = max(0.15,0.60-0.40*severity);
+isAdaptive = strcmpi(options.variant,'adaptive-transfer');
+if isAdaptive
+    historicalShare = max(0.15,0.60-0.40*severity);
+else
+    historicalShare = 0.60;
+end
 if index <= floor(historicalShare*nPop) && ~isempty(previousSolution)
     route = PositionToRoute(oldGuide,activeIDs);
     position = RouteToPosition(route,activeIDs,0.025);
@@ -256,7 +261,7 @@ end
 function options = FillOptions(options)
 defaults = struct('nPop',30,'maxIt',100,'maxFE',3000, ...
     'w',0.9,'wdamp',0.99,'c1',1.5,'c2',1.5, ...
-    'velocityRatio',0.2,'seed',20260931,'variant','full', ...
+    'velocityRatio',0.2,'seed',20260931,'variant','paper-core', ...
     'fixedGuideWeight',0.5);
 fields = fieldnames(defaults);
 for k = 1:numel(fields)

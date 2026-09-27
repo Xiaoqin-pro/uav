@@ -117,11 +117,13 @@ elseif strcmpi(algorithm,'Warm-PSO') || strcmpi(algorithm,'Warm_PSO')
 elseif strcmpi(algorithm,'Warm-ALNS') || strcmpi(algorithm,'Warm_ALNS')
     [plan,bestCost,stats,history] = Warm_ALNS(model,state,maxgen,nPop,previous,seed);
 elseif strcmpi(algorithm,'EAT-NoReconstruction')
-    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'no-reconstruction');
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-no-reconstruction');
 elseif strcmpi(algorithm,'EAT-FixedSeverity')
-    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'fixed-severity');
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core');
+elseif strcmpi(algorithm,'EAT-Adaptive')
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'adaptive-transfer');
 elseif strcmpi(algorithm,'EAT-PSO') || strcmpi(algorithm,'EAT_PSO')
-    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'full');
+    [plan,bestCost,stats,history] = EAT_PSO(model,state,maxgen,nPop,previous,seed,'paper-core');
 else
     error('Unsupported algorithm: %s',algorithm);
 end
