@@ -78,8 +78,11 @@ for i = 1:nPop
             break;
         end
         initialDuplicateRetries = initialDuplicateRetries+1;
-        route = PerturbRoute(activeIDs(order));
+        route = PerturbRoute(activeIDs(order),attempt);
         position = RouteToPosition(route,activeIDs,0);
+        [~,order] = sort(position,'ascend');
+        candidateRoute = [fixedPrefix,activeIDs(order)];
+        signature = RouteSignature(candidateRoute);
         label = label+"-unique";
     end
     sourceLabels(i) = label;
@@ -294,9 +297,10 @@ for k = 1:numel(fields)
 end
 end
 
-function route = PerturbRoute(route)
+function route = PerturbRoute(route,attempt)
+if nargin<2, attempt=1; end
 if numel(route)<2, return; end
-if rand<0.5
+if mod(attempt,2)==1
     idx = randperm(numel(route),2);
     route(idx) = route(fliplr(idx));
 else

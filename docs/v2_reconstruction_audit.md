@@ -20,3 +20,7 @@ The v2 branch now implements the candidate changes only:
 3. `paper-no-reconstruction` remains the matched ablation with fixed guide weight and no multi-source reconstruction.
 
 No v2 holdout was opened. The 15 v2 development and 30 v2 holdout manifests are disjoint and remain unconsumed by this audit.
+
+## V2 implementation smoke check
+
+On V2D01 at an applied post-event state, the v2 paper-core initializer decoded **6 unique routes for 6 particles**. It used 64 pre-FE duplicate retries; those retries invoked no full `EvaluateRoute` and therefore did not consume the 18-route FE budget, but their CPU cost belongs in response wall time. This confirms that the uniqueness guard is active. The high retry count is an explicit diagnostic for the next v2 development screen, not a hidden cost.
