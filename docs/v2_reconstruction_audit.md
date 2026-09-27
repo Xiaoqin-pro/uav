@@ -24,3 +24,7 @@ No v2 holdout was opened. The 15 v2 development and 30 v2 holdout manifests are 
 ## V2 implementation smoke check
 
 On V2D01 at an applied post-event state, the v2 paper-core initializer decoded **6 unique routes for 6 particles**. It used 64 pre-FE duplicate retries; those retries invoked no full `EvaluateRoute` and therefore did not consume the 18-route FE budget, but their CPU cost belongs in response wall time. This confirms that the uniqueness guard is active. The high retry count is an explicit diagnostic for the next v2 development screen, not a hidden cost.
+
+## V2D01 semantic smoke
+
+A one-scenario smoke using five methods (PSO, Warm-PSO, Warm-ALNS, paper-core EAT-PSO and paper-no-reconstruction) completed all nine events with the fixed FE budget and route/state semantics. The smoke is not a performance result; it verifies the variant labels, fixed-prefix behavior, output schema and matched FE accounting. In this particular scenario no add-event route recovered within 18 FE, which is acceptable for a semantic smoke and is not used to tune v2.

@@ -32,9 +32,11 @@ if nVar == 0
     stats.guideWeight = 0;
     stats.severityComponents = [0 0 0];
     stats.variant = options.variant;
-    stats.initialUniqueCount = numel(unique(usedSignatures));
-stats.initialDuplicateRetries = initialDuplicateRetries;
-stats.options = options;
+    stats.initialTargetUniqueCount = 0;
+    stats.initialUniqueCount = 0;
+    stats.initialDuplicateRetries = 0;
+    stats.initialUniqueExhausted = false;
+    stats.options = options;
     return;
 end
 
@@ -57,33 +59,44 @@ firstFeasibleFE = inf;
 sourceLabels = strings(nPop,1);
 usedSignatures = strings(0,1);
 initialDuplicateRetries = 0;
+initialUniqueExhausted = false;
 ensureUnique = strcmpi(options.variant,'paper-core') || ...
     strcmpi(options.variant,'adaptive-transfer');
+if nVar <= 8
+    initialTargetUniqueCount = min(nPop,factorial(nVar));
+else
+    initialTargetUniqueCount = nPop;
+end
 
 if isempty(previousSolution)
     guideWeight = 1;  % No historical memory exists at initial planning.
-elseif strcmpi(options.variant,'paper-core') || strcmpi(options.variant,'fixed-severity')
-    guideWeight = 0.5;
+elseif strcmpi(options.variant,'paper-core') || ...
+        strcmpi(options.variant,'paper-no-reconstruction') || ...
+        strcmpi(options.variant,'fixed-severity') || ...
+        strcmpi(options.variant,'no-reconstruction')
+    guideWeight = options.fixedGuideWeight;
 else
     guideWeight = severity;
 end
 for i = 1:nPop
-        for attempt = 1:options.maxInitializationRetries
-        [position,label] = InitializePosition(i,nPop,activeIDs, ...
-            oldGuide,guideWeight,previousSolution,options,scenario,state);
-        [~,order] = sort(position,'ascend');
-        candidateRoute = [fixedPrefix,activeIDs(order)];
-        signature = RouteSignature(candidateRoute);
-        if ~ensureUnique || ~ismember(signature,usedSignatures)
-            break;
-        end
+    [position,label] = InitializePosition(i,nPop,activeIDs, ...
+        oldGuide,guideWeight,previousSolution,options,scenario,state);
+    [~,order] = sort(position,'ascend');
+    candidateRoute = [fixedPrefix,activeIDs(order)];
+    signature = RouteSignature(candidateRoute);
+    attempt = 0;
+    while ensureUnique && ismember(signature,usedSignatures) && ...
+            attempt < options.maxInitializationRetries
+        attempt = attempt+1;
         initialDuplicateRetries = initialDuplicateRetries+1;
         route = PerturbRoute(activeIDs(order),attempt);
         position = RouteToPosition(route,activeIDs,0);
         [~,order] = sort(position,'ascend');
         candidateRoute = [fixedPrefix,activeIDs(order)];
         signature = RouteSignature(candidateRoute);
-        label = label+"-unique";
+    end
+    if ensureUnique && ismember(signature,usedSignatures)
+        initialUniqueExhausted = true;
     end
     sourceLabels(i) = label;
     usedSignatures(end+1) = signature;
@@ -162,8 +175,10 @@ stats.guideWeight = guideWeight;
 stats.severityComponents = severityComponents;
 stats.sourceLabels = sourceLabels;
 stats.variant = options.variant;
+stats.initialTargetUniqueCount = initialTargetUniqueCount;
 stats.initialUniqueCount = numel(unique(usedSignatures));
 stats.initialDuplicateRetries = initialDuplicateRetries;
+stats.initialUniqueExhausted = initialUniqueExhausted;
 stats.options = options;
 end
 

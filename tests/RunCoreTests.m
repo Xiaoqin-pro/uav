@@ -79,11 +79,24 @@ assert(applied);
     state.activeOrderIDs,plan,model,state);
 assert(all(components>=0 & components<=1) && severity>=0 && severity<=1);
 assert(severity>0);
-for variant = {'full','no-reconstruction','fixed-severity'}
-    [solution,~,st] = EAT_PSO(model,state,2,4,plan,27182,variant{1});
-    assert(st.functionEvaluations==8);
-    assert(numel(unique(solution.Route))==numel(state.activeOrderIDs));
-    assert(all(ismember(solution.Route,state.activeOrderIDs)));
+[core,~,coreStats] = EAT_PSO(model,state,2,4,plan,27182,'paper-core');
+[noRec,~,noRecStats] = EAT_PSO(model,state,2,4,plan,27182,'paper-no-reconstruction');
+[adaptive,~,adaptiveStats] = EAT_PSO(model,state,2,4,plan,27182,'adaptive-transfer');
+assert(abs(coreStats.guideWeight-0.5)<1e-12);
+assert(abs(noRecStats.guideWeight-0.5)<1e-12);
+assert(strcmp(coreStats.variant,'paper-core'));
+assert(strcmp(noRecStats.variant,'paper-no-reconstruction'));
+assert(strcmp(adaptiveStats.variant,'adaptive-transfer'));
+assert(coreStats.functionEvaluations==8);
+assert(noRecStats.functionEvaluations==8);
+assert(adaptiveStats.functionEvaluations==8);
+assert(coreStats.initialUniqueCount <= coreStats.initialTargetUniqueCount);
+assert(coreStats.initialDuplicateRetries>=0);
+assert(coreStats.initialUniqueCount==coreStats.initialTargetUniqueCount);
+assert(coreStats.initialUniqueExhausted==false);
+for solution = {core,noRec,adaptive}
+    assert(numel(unique(solution{1}.Route))==numel(state.activeOrderIDs));
+    assert(all(ismember(solution{1}.Route,state.activeOrderIDs)));
 end
 episode = RunEpisode(CreateModel(cfg),'PSO',2,4,27183);
 for e = 1:numel(episode.records)
