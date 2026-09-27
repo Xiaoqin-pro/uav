@@ -58,3 +58,29 @@ RunSmokeTest;
 6. 输出 CSV/MAT 和三维场景图。
 
 所有论文候选结果必须在后续正式实验中重新运行，当前 smoke test 只验证数据链路和代码接口。
+
+## 与老师示例代码的结构对应
+
+为了保持和老师给出的 `main.m / PSO.m / LMS.m` 风格一致，仓库根目录提供了扁平入口：
+
+```text
+main.m          一键实验入口
+PSO.m           Random-key PSO baseline
+EAT_PSO.m       事件感知种群迁移 PSO
+CreateModel.m   场景生成入口
+Fitness.m       路线适应度入口
+DynamicEvent.m  动态事件入口
+PlotSolution.m  结果绘图入口
+```
+
+较长的实现放在 `src/`，根目录函数只负责保持清晰、可直接运行的算法对比接口。这样既保留老师示例中“主程序调用多个算法、记录收敛曲线、统一绘图”的结构，也避免把数据生成、评价器和算法全部写进一个 `main.m`。
+
+运行：
+
+```matlab
+cd('D:\111\Desktop\噜噜\new');
+main;
+```
+
+`main.m` 当前只是小规模演示入口，正式论文实验不会使用该演示规模，也不会把演示输出直接当作论文结论。
+
