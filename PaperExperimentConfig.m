@@ -1,6 +1,6 @@
 function o = PaperExperimentConfig
-%PAPEREXPERIMENTCONFIG Frozen candidate configuration for paper v1.
-%   Do not change after the pipeline dry run without creating a new version.
+%PAPEREXPERIMENTCONFIG Frozen candidate configuration for paper v2.
+%   Do not change after the v2 pipeline dry run without creating a new version.
 o.version = 'paper-v2-candidate';
 o.levels = {'severe'};
 o.windowLengthOverride = 135;
@@ -18,7 +18,7 @@ o.ablationAlgorithms = {'EAT-PSO','EAT-NoReconstruction','EAT-NoInsertion'};
 o.censoredFE = o.maxFE+1;
 o.primaryEventType = 'add';
 o.stats = {'mean','std','median','paired-wilcoxon','holm'};
-o.holdoutManifest = fullfile('data','reserved_holdout_seeds.csv');
-o.dryrunManifest = fullfile('data','pipeline_dryrun_v1_seeds.csv');
-o.outputStem = 'paper_v1';
+o.holdoutManifest = fullfile('data','paper_v2_holdout_seeds.csv');
+o.dryrunManifest = fullfile('data','pipeline_dryrun_v2_seeds.csv');
+o.outputStem = 'paper_v2';
 end
